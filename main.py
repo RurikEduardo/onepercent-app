@@ -523,7 +523,7 @@ def main(page: ft.Page):
         content=ft.Column([
             ft.Container(height=50), 
             
-            # --- AQUI ESTÁ A MÁGICA DA IMAGEM ---
+            # --- AQUI ESTÁ A IMAGEM DA SUA LOGO ---
             ft.Image(src="logo.png", width=120, height=120, fit=ft.ImageFit.CONTAIN),
             
             ft.Text("OnePercent", size=32, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
@@ -598,5 +598,13 @@ def main(page: ft.Page):
         tela_abertura 
     ], expand=True))
 
-# --- O AJUSTE FINAL: AVISANDO O FLET ONDE A IMAGEM ESTÁ ---
-ft.app(target=main, assets_dir="assets")
+
+# --- O GPS DA PASTA ASSETS (À PROVA DE BALAS) ---
+caminho_script = os.path.dirname(os.path.abspath(__file__))
+pasta_assets = os.path.join(caminho_script, "assets")
+
+# Se a pasta não existir por algum motivo, o Python cria uma vazia na hora pra não dar tela preta
+if not os.path.exists(pasta_assets):
+    os.makedirs(pasta_assets)
+
+ft.app(target=main, assets_dir=pasta_assets)
