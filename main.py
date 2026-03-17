@@ -16,7 +16,7 @@ def main(page: ft.Page):
     page.padding = 0 
     page.bgcolor = "#050A15" 
 
-    # --- INICIALIZAÇÃO SEGURA DO BANCO DE DADOS ---
+    # --- INICIALIZAÇÃO SEGURA DO BANCO DE DADOS (LOCAL) ---
     if page.platform == ft.PagePlatform.ANDROID or page.platform == ft.PagePlatform.IOS:
         caminho_base = os.environ.get("HOME", ".")
     else:
@@ -115,11 +115,11 @@ def main(page: ft.Page):
     ], width=tamanho_radar, height=tamanho_radar)
 
     # --- POP-UP DAS MÉTRICAS ---
-    p_input = ft.TextField(label="Peso(kg)", label_style=ft.TextStyle(size=12), text_size=14, width=85, dense=True, bgcolor="#1F2937", border_color=ft.Colors.TRANSPARENT)
-    a_input = ft.TextField(label="Alt.(cm)", label_style=ft.TextStyle(size=12), text_size=14, width=85, dense=True, bgcolor="#1F2937", border_color=ft.Colors.TRANSPARENT)
-    res_imc = ft.Text("--", size=20, weight=ft.FontWeight.BOLD, color="#39FF14")
-    m_input = ft.TextField(label="Meta(kg)", label_style=ft.TextStyle(size=12), text_size=14, width=85, dense=True, bgcolor="#1F2937", border_color=ft.Colors.TRANSPARENT)
-    res_meta = ft.Text("--", size=20, weight=ft.FontWeight.BOLD, color="#FFBE0B")
+    p_input = ft.TextField(label="Peso(kg)", label_style=ft.TextStyle(size=12), text_size=12, width=75, dense=True, bgcolor="#1F2937", border_color=ft.Colors.TRANSPARENT)
+    a_input = ft.TextField(label="Alt.(cm)", label_style=ft.TextStyle(size=12), text_size=12, width=75, dense=True, bgcolor="#1F2937", border_color=ft.Colors.TRANSPARENT)
+    res_imc = ft.Text("--", size=14, weight=ft.FontWeight.BOLD, color="#39FF14") 
+    m_input = ft.TextField(label="Meta(kg)", label_style=ft.TextStyle(size=12), text_size=12, width=75, dense=True, bgcolor="#1F2937", border_color=ft.Colors.TRANSPARENT)
+    res_meta = ft.Text("--", size=14, weight=ft.FontWeight.BOLD, color="#FFBE0B") 
 
     def calc_imc(e):
         try: res_imc.value = f"{(float(p_input.value.replace(',', '.')) / ((float(a_input.value.replace(',', '.'))/100) ** 2)):.1f}"; page.update()
@@ -154,13 +154,13 @@ def main(page: ft.Page):
         modal=True,
         title=ft.Row([ft.Icon(ft.Icons.FITNESS_CENTER, color="#39FF14"), ft.Text("Status do Personagem", color=ft.Colors.WHITE, size=18, weight="bold")]),
         content=ft.Container(
-            width=320, 
+            width=290, 
             content=ft.Column([
-                ft.Text("Atualize suas medidas e metas a qualquer momento.", size=12, color="#9CA3AF"),
-                ft.Container(height=10),
-                ft.Row([p_input, a_input, ft.IconButton(ft.Icons.CALCULATE, icon_color="#39FF14", on_click=calc_imc), res_imc], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                ft.Row([m_input, ft.Container(width=85), ft.IconButton(ft.Icons.TRACK_CHANGES, icon_color="#FFBE0B", on_click=calc_meta), res_meta], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
-            ], tight=True)
+                ft.Text("Atualize suas medidas e metas.", size=11, color="#9CA3AF"),
+                ft.Container(height=8),
+                ft.Row([p_input, a_input, ft.Row([ft.IconButton(ft.Icons.CALCULATE, icon_color="#39FF14", icon_size=16, on_click=calc_imc, padding=0), res_imc], spacing=0)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                ft.Row([m_input, ft.Row([ft.IconButton(ft.Icons.TRACK_CHANGES, icon_color="#FFBE0B", icon_size=16, on_click=calc_meta, padding=0), res_meta], spacing=0)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
+            ], tight=True, spacing=10) 
         ),
         actions=[
             ft.TextButton("Cancelar", on_click=fechar_modal_metricas, style=ft.ButtonStyle(color="#9CA3AF")),
@@ -285,32 +285,23 @@ def main(page: ft.Page):
             if campo.value: criar_tarefa_ui(campo.value, coluna_destino, lista_checks, cor, categoria); campo.value = ""; page.update()
         return ft.Row([campo, ft.IconButton(icon=ft.Icons.ADD_BOX, icon_color=cor, icon_size=35, on_click=add)])
 
-    # --- O NOVO FORMULÁRIO DE TREINOS ---
+    # --- O NOVO FORMULÁRIO DE TREINOS COM DETALHES AVANÇADOS ---
     def comp_novo_treino(coluna_destino, lista_checks, cor, categoria):
-        # Campos separados para melhor organização visual
         campo_titulo = ft.TextField(hint_text="Título (Ex: Peito, Corrida)", text_size=14, expand=True, dense=True, bgcolor="#1F2937", border_radius=8, border_color=ft.Colors.TRANSPARENT)
         campo_exercicio = ft.TextField(hint_text="Exercício (Ex: Supino Reto)", text_size=14, expand=True, dense=True, bgcolor="#1F2937", border_radius=8, border_color=ft.Colors.TRANSPARENT)
-        campo_reps = ft.TextField(hint_text="Reps/Séries", text_size=12, expand=1, dense=True, bgcolor="#1F2937", border_radius=8, border_color=ft.Colors.TRANSPARENT)
-        campo_peso = ft.TextField(hint_text="Peso", text_size=12, expand=1, dense=True, bgcolor="#1F2937", border_radius=8, border_color=ft.Colors.TRANSPARENT)
+        campo_reps = ft.TextField(hint_text="Reps/Séries (Opcional)", text_size=12, expand=1, dense=True, bgcolor="#1F2937", border_radius=8, border_color=ft.Colors.TRANSPARENT)
+        campo_peso = ft.TextField(hint_text="Peso (Opcional)", text_size=12, expand=1, dense=True, bgcolor="#1F2937", border_radius=8, border_color=ft.Colors.TRANSPARENT)
         
         def add(e):
-            # Exige que os dois campos principais estejam preenchidos
             if campo_titulo.value and campo_exercicio.value:
-                # Monta a formatação elegante
                 texto_final = f"[{campo_titulo.value}] {campo_exercicio.value}"
-                
                 detalhes = []
-                if campo_reps.value:
-                    detalhes.append(f"{campo_reps.value}")
-                if campo_peso.value:
-                    detalhes.append(f"{campo_peso.value}")
-                    
-                if detalhes:
-                    texto_final += f"\n↳ " + " | ".join(detalhes)
+                if campo_reps.value: detalhes.append(f"{campo_reps.value}")
+                if campo_peso.value: detalhes.append(f"{campo_peso.value}")
+                if detalhes: texto_final += f"\n↳ " + " | ".join(detalhes)
                     
                 criar_tarefa_ui(texto_final, coluna_destino, lista_checks, cor, categoria)
                 
-                # Limpa os campos, EXCETO o título. Isso agiliza muito a inserção de exercícios do mesmo grupo!
                 campo_exercicio.value = ""
                 campo_reps.value = ""
                 campo_peso.value = ""
@@ -319,7 +310,7 @@ def main(page: ft.Page):
         return ft.Column([
             campo_titulo,
             campo_exercicio,
-            ft.Row([campo_reps, campo_peso, ft.IconButton(icon=ft.Icons.ADD_BOX, icon_color=cor, icon_size=35, on_click=add)])
+            ft.Row([campo_reps, campo_peso, ft.IconButton(icon=ft.Icons.ADD_BOX, icon_color=cor, icon_size=35, on_click=add, padding=ft.padding.only(top=8))])
         ], spacing=5)
 
     def carregar_dados_do_dia():
@@ -497,9 +488,115 @@ def main(page: ft.Page):
 
     carregar_dados_do_dia()
 
+    # --- TELA DE LOGIN/CADASTRO COM A IMAGEM CUSTOMIZADA ---
+    usuario_logado = False 
+
+    email_input = ft.TextField(
+        label="Seu e-mail",
+        border_radius=12,
+        bgcolor="#1F2937",
+        border_color=ft.Colors.TRANSPARENT,
+        dense=True,
+        text_size=14,
+        width=320,
+    )
+    telefone_input = ft.TextField(
+        label="Seu telefone (opcional)",
+        border_radius=12,
+        bgcolor="#1F2937",
+        border_color=ft.Colors.TRANSPARENT,
+        dense=True,
+        text_size=14,
+        width=320,
+    )
+
+    def fechar_tela_login(e):
+        global usuario_logado
+        usuario_logado = True
+        tela_abertura.visible = False
+        page.update()
+
+    tela_abertura = ft.Container(
+        visible=not usuario_logado,
+        left=0, top=0, right=0, bottom=0,
+        bgcolor="#F2050A15",
+        content=ft.Column([
+            ft.Container(height=50), 
+            
+            # --- AQUI ESTÁ A MÁGICA DA IMAGEM ---
+            ft.Image(src="logo.png", width=120, height=120, fit=ft.ImageFit.CONTAIN),
+            
+            ft.Text("OnePercent", size=32, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+            ft.Text("Sua evolução diária começa aqui.", size=14, color="#9CA3AF"),
+            ft.Container(height=40),
+            
+            email_input,
+            ft.Container(height=5),
+            telefone_input,
+            ft.Container(height=20),
+            
+            ft.ElevatedButton(
+                "Criar Conta Gratuita",
+                icon=ft.Icons.PERSON_ADD,
+                bgcolor="#00E5FF", 
+                color=ft.Colors.BLACK,
+                style=ft.ButtonStyle(
+                    shape=ft.RoundedRectangleBorder(radius=12),
+                    padding=ft.padding.symmetric(horizontal=30, vertical=15),
+                ),
+                width=320,
+                on_click=fechar_tela_login, 
+            ),
+            
+            ft.Container(height=10),
+            
+            ft.TextButton(
+                "Já tenho conta. Entrar",
+                icon=ft.Icons.LOGIN,
+                style=ft.ButtonStyle(color="#00E5FF"),
+                width=320,
+                on_click=fechar_tela_login,
+            ),
+            
+            ft.Container(height=30),
+            
+            ft.TextButton(
+                "Continuar sem cadastro (modo local)",
+                icon=ft.Icons.ARROW_FORWARD,
+                style=ft.ButtonStyle(color="#9CA3AF"),
+                width=320,
+                on_click=fechar_tela_login,
+            ),
+            
+            ft.Container(expand=True),
+            ft.Container(
+                content=ft.Column([
+                    ft.Text(
+                        '"Por isso, não tema, pois estou com você; não tenha medo, pois sou o seu Deus. Eu o fortalecerei e o ajudarei; eu o segurarei com a destra da minha justiça."',
+                        size=12, 
+                        color="#9CA3AF", 
+                        text_align=ft.TextAlign.CENTER, 
+                        italic=True
+                    ),
+                    ft.Text(
+                        "Isaías 41:10", 
+                        size=12, 
+                        weight=ft.FontWeight.BOLD, 
+                        color="#FF9800", 
+                        text_align=ft.TextAlign.CENTER
+                    ),
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=5),
+                padding=ft.padding.only(bottom=30, left=30, right=30)
+            )
+            
+        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER)
+    )
+
     page.add(ft.Stack([
         ft.Column([cabecalho, barra_semana, menu_abas, area_conteudo], expand=True),
-        tela_foco 
+        tela_foco, 
+        tela_abertura 
     ], expand=True))
 
-ft.app(target=main)
+# --- O AJUSTE FINAL: AVISANDO O FLET ONDE A IMAGEM ESTÁ ---
+ft.app(target=main, assets_dir="assets")
