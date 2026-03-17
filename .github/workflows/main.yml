@@ -1,0 +1,40 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Pegar o Código
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar Java (Obrigatório para Android)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Instalar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Instalar Flet
+        run: pip install flet
+
+      - name: Fabricar o APK
+        run: flet build apk
+
+      - name: Salvar o APK para Download
+        uses: actions/upload-artifact@v4
+        with:
+          name: OnePercent-App
+          path: build/apk/**/*.apk
