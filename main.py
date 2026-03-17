@@ -17,12 +17,9 @@ def main(page: ft.Page):
     page.bgcolor = "#050A15" 
 
     # --- INICIALIZAÇÃO SEGURA DO BANCO DE DADOS (MÚLTIPLAS PLATAFORMAS) ---
-    # Aqui está o nosso "Escudo" para o Android!
     if page.platform == ft.PagePlatform.ANDROID or page.platform == ft.PagePlatform.IOS:
-        # No celular, o sistema exige que salvemos na pasta de dados do usuário
         caminho_base = os.environ.get("HOME", ".")
     else:
-        # No Windows/Computador, salvamos na mesma pasta do script
         if getattr(sys, 'frozen', False):
             caminho_base = os.path.dirname(sys.executable)
         else:
@@ -315,7 +312,6 @@ def main(page: ft.Page):
         tarefas = c.fetchall()
 
         if not tarefas:
-            # Se for um dia vazio, não cria nada automaticamente além da água zerada.
             pass
         else:
             for task_id, cat, txt, concluida in tarefas:
@@ -350,7 +346,7 @@ def main(page: ft.Page):
 
     barra_semana = ft.Container(content=ft.Row(botoes_dias, scroll="auto", alignment=ft.MainAxisAlignment.SPACE_BETWEEN), padding=ft.padding.only(left=20, right=20, bottom=20))
 
-    # --- MODO FOCO ---
+    # --- MODO FOCO (TIMER CORRIGIDO PARA ANDROID) ---
     txt_timer_foco = ft.Text("00:00", size=70, weight=ft.FontWeight.W_300, color=ft.Colors.WHITE)
     anel_progresso = ft.ProgressRing(value=1.0, stroke_width=6, color="#00E5FF", width=250, height=250)
     
@@ -374,7 +370,7 @@ def main(page: ft.Page):
 
     dropdown_foco = ft.Dropdown(options=[ft.dropdown.Option("1 min"), ft.dropdown.Option("15 min"), ft.dropdown.Option("30 min"), ft.dropdown.Option("45 min"), ft.dropdown.Option("60 min")], width=120, value="30 min", dense=True, bgcolor="#1F2937", border_color=ft.Colors.TRANSPARENT)
 
-   def iniciar_timer(e):
+    def iniciar_timer(e):
         minutos = int(dropdown_foco.value.split()[0])
         estado_timer["segundos"] = minutos * 60
         estado_timer["rodando"] = True
@@ -391,8 +387,7 @@ def main(page: ft.Page):
                 txt_timer_foco.value = f"{m:02d}:{s:02d}"
                 anel_progresso.value = estado_timer["segundos"] / total
                 
-                # A MÁGICA PARA O ANDROID ESTÁ AQUI:
-                # Usamos page.update() para forçar o Android a redesenhar a tela
+                # Atualização forçada para o Android não matar a Thread
                 page.update() 
                 
                 time.sleep(1)
