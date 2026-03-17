@@ -488,7 +488,7 @@ def main(page: ft.Page):
 
     carregar_dados_do_dia()
 
-    # --- TELA DE LOGIN/CADASTRO COM A IMAGEM CUSTOMIZADA ---
+    # --- TELA DE LOGIN/CADASTRO COM O VERSÍCULO E AJUSTES ---
     usuario_logado = False 
 
     email_input = ft.TextField(
@@ -521,10 +521,12 @@ def main(page: ft.Page):
         left=0, top=0, right=0, bottom=0,
         bgcolor="#F2050A15",
         content=ft.Column([
-            ft.Container(height=50), 
+            # --- AJUSTE DE POSIÇÃO (Conteúdo para cima) ---
+            ft.Container(height=50), # Espaço no topo reduzido de 120 para 50
             
-            # --- AQUI ESTÁ A IMAGEM DA SUA LOGO ---
-            ft.Image(src="logo.png", width=120, height=120, fit=ft.ImageFit.CONTAIN),
+            # --- SUBSTITUIÇÃO DO ÍCONE (Foguinho Laranja e Maior) ---
+            # ft.Icon(ft.Icons.ROCKET_LAUNCH, color="#00E5FF", size=60), # Antigo
+            ft.Icon(ft.Icons.WHATSHOT, color="#FF9800", size=80), # Novo Foguinho Laranja (é um fogo motivacional)
             
             ft.Text("OnePercent", size=32, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
             ft.Text("Sua evolução diária começa aqui.", size=14, color="#9CA3AF"),
@@ -568,7 +570,8 @@ def main(page: ft.Page):
                 on_click=fechar_tela_login,
             ),
             
-            ft.Container(expand=True),
+            # --- O VERSÍCULO NO RODAPÉ ---
+            ft.Container(expand=True), # Empurra o conteúdo abaixo para o final da tela
             ft.Container(
                 content=ft.Column([
                     ft.Text(
@@ -578,11 +581,13 @@ def main(page: ft.Page):
                         text_align=ft.TextAlign.CENTER, 
                         italic=True
                     ),
+                    # --- AJUSTE DE COR (Referência Laranja) ---
                     ft.Text(
                         "Isaías 41:10", 
                         size=12, 
                         weight=ft.FontWeight.BOLD, 
-                        color="#FF9800", 
+                        # color="#00E5FF", # Antigo Azul Neon
+                        color="#FF9800", # Novo Laranja
                         text_align=ft.TextAlign.CENTER
                     ),
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=5),
@@ -598,13 +603,4 @@ def main(page: ft.Page):
         tela_abertura 
     ], expand=True))
 
-
-# --- O GPS DA PASTA ASSETS (À PROVA DE BALAS) ---
-caminho_script = os.path.dirname(os.path.abspath(__file__))
-pasta_assets = os.path.join(caminho_script, "assets")
-
-# Se a pasta não existir por algum motivo, o Python cria uma vazia na hora pra não dar tela preta
-if not os.path.exists(pasta_assets):
-    os.makedirs(pasta_assets)
-
-ft.app(target=main, assets_dir=pasta_assets)
+ft.app(target=main)
