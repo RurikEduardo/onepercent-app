@@ -1,7 +1,7 @@
 import flet as ft
 import flet.canvas as cv
 import time
-import threading
+import asyncio
 import datetime
 import sqlite3
 import os
@@ -16,7 +16,7 @@ def main(page: ft.Page):
     page.padding = 0 
     page.bgcolor = "#050A15" 
 
-    # --- INICIALIZAÇÃO SEGURA DO BANCO DE DADOS (MÚLTIPLAS PLATAFORMAS) ---
+    # --- INICIALIZAÇÃO SEGURA DO BANCO DE DADOS ---
     if page.platform == ft.PagePlatform.ANDROID or page.platform == ft.PagePlatform.IOS:
         caminho_base = os.environ.get("HOME", ".")
     else:
@@ -34,7 +34,7 @@ def main(page: ft.Page):
     c.execute('''CREATE TABLE IF NOT EXISTS metricas (id INTEGER PRIMARY KEY, peso REAL, altura REAL, meta REAL)''')
     conn.commit()
 
-    # --- VARIÁVEIS GLOBAIS E ESTADO ---
+    # --- VARIÁVEIS GLOBAIS ---
     estado_timer = {"rodando": False, "segundos": 0} 
     
     checks_treinos = []
@@ -51,7 +51,7 @@ def main(page: ft.Page):
     dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
     dia_selecionado = dias_semana[hoje.weekday()]
 
-    # --- GRÁFICO DE RADAR (HEXÁGONO GAMER) ---
+    # --- GRÁFICO DE RADAR ---
     texto_porcentagem = ft.Text("0%", size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)
     tamanho_radar = 180 
     cx, cy = tamanho_radar / 2, tamanho_radar / 2
@@ -114,11 +114,11 @@ def main(page: ft.Page):
         ft.Container(ft.Text("Família", size=10, weight="bold", color="#F472B6"), top=40, left=0),
     ], width=tamanho_radar, height=tamanho_radar)
 
-    # --- MÓDULO DE STATUS DO PERSONAGEM (POP-UP DAS MÉTRICAS) ---
-    p_input = ft.TextField(label="Peso (kg)", value="93", expand=1, dense=True, bgcolor="#1F2937", border_color=ft.Colors.TRANSPARENT)
-    a_input = ft.TextField(label="Alt. (cm)", expand=1, dense=True, bgcolor="#1F2937", border_color=ft.Colors.TRANSPARENT)
+    # --- POP-UP DAS MÉTRICAS ---
+    p_input = ft.TextField(label="Peso(kg)", label_style=ft.TextStyle(size=12), text_size=14, width=85, dense=True, bgcolor="#1F2937", border_color=ft.Colors.TRANSPARENT)
+    a_input = ft.TextField(label="Alt.(cm)", label_style=ft.TextStyle(size=12), text_size=14, width=85, dense=True, bgcolor="#1F2937", border_color=ft.Colors.TRANSPARENT)
     res_imc = ft.Text("--", size=20, weight=ft.FontWeight.BOLD, color="#39FF14")
-    m_input = ft.TextField(label="Meta (kg)", expand=1, dense=True, bgcolor="#1F2937", border_color=ft.Colors.TRANSPARENT)
+    m_input = ft.TextField(label="Meta(kg)", label_style=ft.TextStyle(size=12), text_size=14, width=85, dense=True, bgcolor="#1F2937", border_color=ft.Colors.TRANSPARENT)
     res_meta = ft.Text("--", size=20, weight=ft.FontWeight.BOLD, color="#FFBE0B")
 
     def calc_imc(e):
@@ -142,11 +142,11 @@ def main(page: ft.Page):
         modal_metricas.open = False
         page.update()
 
-    def fechar_modal(e):
+    def fechar_modal_metricas(e):
         modal_metricas.open = False
         page.update()
 
-    def abrir_modal(e):
+    def abrir_modal_metricas(e):
         modal_metricas.open = True
         page.update()
 
@@ -154,16 +154,16 @@ def main(page: ft.Page):
         modal=True,
         title=ft.Row([ft.Icon(ft.Icons.FITNESS_CENTER, color="#39FF14"), ft.Text("Status do Personagem", color=ft.Colors.WHITE, size=18, weight="bold")]),
         content=ft.Container(
-            width=300,
+            width=320, 
             content=ft.Column([
-                ft.Text("Atualize suas medidas e metas a qualquer momento. Estes dados ficam salvos no seu sistema.", size=12, color="#9CA3AF"),
+                ft.Text("Atualize suas medidas e metas a qualquer momento.", size=12, color="#9CA3AF"),
                 ft.Container(height=10),
-                ft.Row([p_input, a_input, ft.IconButton(ft.Icons.CALCULATE, icon_color="#39FF14", on_click=calc_imc), res_imc]),
-                ft.Row([m_input, ft.Container(expand=1), ft.IconButton(ft.Icons.TRACK_CHANGES, icon_color="#FFBE0B", on_click=calc_meta), res_meta])
+                ft.Row([p_input, a_input, ft.IconButton(ft.Icons.CALCULATE, icon_color="#39FF14", on_click=calc_imc), res_imc], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                ft.Row([m_input, ft.Container(width=85), ft.IconButton(ft.Icons.TRACK_CHANGES, icon_color="#FFBE0B", on_click=calc_meta), res_meta], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
             ], tight=True)
         ),
         actions=[
-            ft.TextButton("Cancelar", on_click=fechar_modal, style=ft.ButtonStyle(color="#9CA3AF")),
+            ft.TextButton("Cancelar", on_click=fechar_modal_metricas, style=ft.ButtonStyle(color="#9CA3AF")),
             ft.ElevatedButton("Salvar Status", on_click=salvar_metricas, bgcolor="#00E5FF", color=ft.Colors.BLACK)
         ],
         bgcolor="#111827", shape=ft.RoundedRectangleBorder(radius=16)
@@ -179,13 +179,12 @@ def main(page: ft.Page):
         calc_imc(None)
         calc_meta(None)
 
-    # --- EMBLEMAS ---
+    # --- EMBLEMAS E CABEÇALHO ---
     badges_gamificacao = ft.Row([
-        ft.Container(content=ft.Row([ft.Icon(ft.Icons.LOCAL_FIRE_DEPARTMENT, color="#FFBE0B", size=16), ft.Text("1 Dia", size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)]), bgcolor="#1F2937", padding=ft.padding.symmetric(horizontal=8, vertical=4), border_radius=12),
-        ft.Container(content=ft.Row([ft.Icon(ft.Icons.ROCKET_LAUNCH, color="#00E5FF", size=16), ft.Text("Nível 1", size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)]), bgcolor="#1F2937", padding=ft.padding.symmetric(horizontal=8, vertical=4), border_radius=12)
+        ft.Container(content=ft.Row([ft.Icon(ft.Icons.LOCAL_FIRE_DEPARTMENT, color="#FFBE0B", size=16), ft.Text("1 Dia", size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)]), bgcolor="#1F2937", padding=ft.padding.only(left=8, right=8, top=4, bottom=4), border_radius=12),
+        ft.Container(content=ft.Row([ft.Icon(ft.Icons.ROCKET_LAUNCH, color="#00E5FF", size=16), ft.Text("Nível 1", size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)]), bgcolor="#1F2937", padding=ft.padding.only(left=8, right=8, top=4, bottom=4), border_radius=12)
     ])
 
-    # --- ARTE DO CABEÇALHO ---
     arte_cabecalho = cv.Canvas(
         height=250, 
         shapes=[
@@ -202,7 +201,7 @@ def main(page: ft.Page):
             content=ft.Row([
                 ft.Column([
                     ft.Row([
-                        ft.IconButton(icon=ft.Icons.PERSON, icon_color=ft.Colors.WHITE, icon_size=20, on_click=abrir_modal, tooltip="Status do Personagem", padding=0),
+                        ft.IconButton(icon=ft.Icons.PERSON, icon_color=ft.Colors.WHITE, icon_size=20, on_click=abrir_modal_metricas, tooltip="Status do Personagem", padding=0),
                         ft.Text(texto_data, size=14, color="#00E5FF", weight=ft.FontWeight.BOLD)
                     ], alignment=ft.MainAxisAlignment.START, spacing=5), 
                     ft.Text("Evolua 1%", size=24, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
@@ -246,7 +245,7 @@ def main(page: ft.Page):
 
     cartao_agua = criar_cartao("Hidratação", ft.Column([ft.Row([ft.Column([ft.Text("Meta (L)", size=12, color="#9CA3AF"), agua_meta_input]), txt_agua_atual, ft.ElevatedButton("250ml", icon=ft.Icons.ADD, on_click=beber_agua, bgcolor="#00E5FF", color=ft.Colors.BLACK)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), barra_agua]), ft.Icons.WATER_DROP, "#00E5FF")
 
-    # --- TAREFAS DINÂMICAS (INTEGRADAS COM BANCO DE DADOS) ---
+    # --- TAREFAS DINÂMICAS ---
     coluna_treinos, coluna_trab, coluna_estudos, coluna_casa, coluna_familia = ft.Column(), ft.Column(), ft.Column(), ft.Column(), ft.Column()
 
     def criar_tarefa_ui(texto, coluna_destino, lista_checks, cor, categoria, task_id=None, concluida=False):
@@ -272,7 +271,11 @@ def main(page: ft.Page):
             coluna_destino.controls.remove(linha)
             atualizar_progresso()
 
-        linha = ft.Row([chk, ft.IconButton(icon=ft.Icons.DELETE_ROUNDED, icon_color="#EF4444", icon_size=20, on_click=remover_tarefa)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
+        linha = ft.Row([
+            ft.Container(chk, expand=True), 
+            ft.IconButton(icon=ft.Icons.DELETE_ROUNDED, icon_color="#EF4444", icon_size=20, on_click=remover_tarefa)
+        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.START)
+        
         coluna_destino.controls.append(linha)
         atualizar_progresso()
 
@@ -282,7 +285,43 @@ def main(page: ft.Page):
             if campo.value: criar_tarefa_ui(campo.value, coluna_destino, lista_checks, cor, categoria); campo.value = ""; page.update()
         return ft.Row([campo, ft.IconButton(icon=ft.Icons.ADD_BOX, icon_color=cor, icon_size=35, on_click=add)])
 
-    # --- SISTEMA DE CARREGAMENTO POR DIA ---
+    # --- O NOVO FORMULÁRIO DE TREINOS ---
+    def comp_novo_treino(coluna_destino, lista_checks, cor, categoria):
+        # Campos separados para melhor organização visual
+        campo_titulo = ft.TextField(hint_text="Título (Ex: Peito, Corrida)", text_size=14, expand=True, dense=True, bgcolor="#1F2937", border_radius=8, border_color=ft.Colors.TRANSPARENT)
+        campo_exercicio = ft.TextField(hint_text="Exercício (Ex: Supino Reto)", text_size=14, expand=True, dense=True, bgcolor="#1F2937", border_radius=8, border_color=ft.Colors.TRANSPARENT)
+        campo_reps = ft.TextField(hint_text="Reps/Séries", text_size=12, expand=1, dense=True, bgcolor="#1F2937", border_radius=8, border_color=ft.Colors.TRANSPARENT)
+        campo_peso = ft.TextField(hint_text="Peso", text_size=12, expand=1, dense=True, bgcolor="#1F2937", border_radius=8, border_color=ft.Colors.TRANSPARENT)
+        
+        def add(e):
+            # Exige que os dois campos principais estejam preenchidos
+            if campo_titulo.value and campo_exercicio.value:
+                # Monta a formatação elegante
+                texto_final = f"[{campo_titulo.value}] {campo_exercicio.value}"
+                
+                detalhes = []
+                if campo_reps.value:
+                    detalhes.append(f"{campo_reps.value}")
+                if campo_peso.value:
+                    detalhes.append(f"{campo_peso.value}")
+                    
+                if detalhes:
+                    texto_final += f"\n↳ " + " | ".join(detalhes)
+                    
+                criar_tarefa_ui(texto_final, coluna_destino, lista_checks, cor, categoria)
+                
+                # Limpa os campos, EXCETO o título. Isso agiliza muito a inserção de exercícios do mesmo grupo!
+                campo_exercicio.value = ""
+                campo_reps.value = ""
+                campo_peso.value = ""
+                page.update()
+                
+        return ft.Column([
+            campo_titulo,
+            campo_exercicio,
+            ft.Row([campo_reps, campo_peso, ft.IconButton(icon=ft.Icons.ADD_BOX, icon_color=cor, icon_size=35, on_click=add)])
+        ], spacing=5)
+
     def carregar_dados_do_dia():
         nonlocal agua_atual
         
@@ -311,9 +350,7 @@ def main(page: ft.Page):
         c.execute("SELECT id, categoria, texto, concluida FROM tarefas WHERE dia=?", (dia_selecionado,))
         tarefas = c.fetchall()
 
-        if not tarefas:
-            pass
-        else:
+        if tarefas:
             for task_id, cat, txt, concluida in tarefas:
                 if cat == "treinos": criar_tarefa_ui(txt, coluna_treinos, checks_treinos, "#FF3D00", cat, task_id, bool(concluida))
                 elif cat == "trabalho": criar_tarefa_ui(txt, coluna_trab, checks_trabalho, "#3A86FF", cat, task_id, bool(concluida))
@@ -323,7 +360,7 @@ def main(page: ft.Page):
         
         atualizar_progresso()
 
-    # --- BARRA DE PLANEJAMENTO SEMANAL CLICÁVEL ---
+    # --- BARRA DE SEMANA ---
     botoes_dias = []
     def on_click_dia(e, d):
         nonlocal dia_selecionado
@@ -339,80 +376,106 @@ def main(page: ft.Page):
             data=d,
             content=ft.Text(d, weight=ft.FontWeight.BOLD, color="#000000" if d == dia_selecionado else ft.Colors.WHITE),
             bgcolor="#00E5FF" if d == dia_selecionado else "#1F2937",
-            border_radius=10, padding=ft.padding.symmetric(vertical=8, horizontal=14), alignment=ft.Alignment(0, 0),
+            border_radius=10, padding=ft.padding.only(left=14, right=14, top=8, bottom=8), alignment=ft.Alignment(0, 0),
             on_click=lambda e, dia=d: on_click_dia(e, dia)
         )
         botoes_dias.append(btn)
 
     barra_semana = ft.Container(content=ft.Row(botoes_dias, scroll="auto", alignment=ft.MainAxisAlignment.SPACE_BETWEEN), padding=ft.padding.only(left=20, right=20, bottom=20))
 
-    # --- MODO FOCO (TIMER CORRIGIDO PARA ANDROID) ---
+    # --- MODO FOCO ---
     txt_timer_foco = ft.Text("00:00", size=70, weight=ft.FontWeight.W_300, color=ft.Colors.WHITE)
     anel_progresso = ft.ProgressRing(value=1.0, stroke_width=6, color="#00E5FF", width=250, height=250)
     
     def fechar_foco(e):
         estado_timer["rodando"] = False
-        container_foco.visible = False
+        tela_foco.visible = False
         page.update()
 
-    container_foco = ft.Container(
-        expand=True, bgcolor="black", visible=False,
+    tela_foco = ft.Container(
+        visible=False,
+        left=0, top=0, right=0, bottom=0, 
+        bgcolor="#F2050A15", 
         content=ft.Column([
-            ft.Container(height=120),
+            ft.Container(height=100), 
             ft.Stack([
                 ft.Container(anel_progresso, alignment=ft.Alignment(0, 0)),
                 ft.Container(txt_timer_foco, alignment=ft.Alignment(0, 0)),
             ], width=250, height=250),
-            ft.Text("FOCO ATIVO", size=16, color="#555555", weight=ft.FontWeight.BOLD),
-            ft.IconButton(ft.Icons.STOP_CIRCLE_OUTLINED, icon_color="#333333", on_click=fechar_foco, icon_size=60)
-        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=60)
+            ft.Container(height=40),
+            ft.Text("FOCO ATIVO", size=18, color="#9CA3AF", weight=ft.FontWeight.BOLD),
+            ft.Container(height=20),
+            ft.IconButton(ft.Icons.STOP_CIRCLE_OUTLINED, icon_color="#EF4444", on_click=fechar_foco, icon_size=60)
+        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER)
     )
 
     dropdown_foco = ft.Dropdown(options=[ft.dropdown.Option("1 min"), ft.dropdown.Option("15 min"), ft.dropdown.Option("30 min"), ft.dropdown.Option("45 min"), ft.dropdown.Option("60 min")], width=120, value="30 min", dense=True, bgcolor="#1F2937", border_color=ft.Colors.TRANSPARENT)
 
     def iniciar_timer(e):
-        minutos = int(dropdown_foco.value.split()[0])
+        if estado_timer["rodando"]:
+            return
+
+        valor = dropdown_foco.value
+        try:
+            minutos = int(valor.split()[0]) if valor else 30
+        except Exception:
+            minutos = 30 
+            
         estado_timer["segundos"] = minutos * 60
         estado_timer["rodando"] = True
-        container_foco.visible = True
+        total_segundos = estado_timer["segundos"]
+        
         anel_progresso.color = "#00E5FF"
         anel_progresso.value = 1.0
         txt_timer_foco.value = f"{minutos:02d}:00"
-        page.update()
         
-        def contar():
-            total = estado_timer["segundos"]
-            while estado_timer["segundos"] > 0 and estado_timer["rodando"]:
-                m, s = divmod(estado_timer["segundos"], 60)
-                txt_timer_foco.value = f"{m:02d}:{s:02d}"
-                anel_progresso.value = estado_timer["segundos"] / total
+        tela_foco.visible = True
+        page.update() 
+        
+        async def contar():
+            while estado_timer["rodando"] and estado_timer["segundos"] > 0:
+                await asyncio.sleep(1) 
                 
-                # Atualização forçada para o Android não matar a Thread
-                page.update() 
-                
-                time.sleep(1)
-                
-                if not estado_timer["rodando"]: break
+                if not estado_timer["rodando"]: 
+                    break
+                    
                 estado_timer["segundos"] -= 1
+                m, s = divmod(estado_timer["segundos"], 60)
+                
+                txt_timer_foco.value = f"{m:02d}:{s:02d}"
+                anel_progresso.value = estado_timer["segundos"] / total_segundos
+                
+                try:
+                    txt_timer_foco.update()
+                    anel_progresso.update()
+                except Exception:
+                    pass
                 
             if estado_timer["segundos"] <= 0 and estado_timer["rodando"]:
                 txt_timer_foco.value = "FEITO!"
+                anel_progresso.value = 1.0
                 anel_progresso.color = ft.Colors.GREEN_400
-                page.update()
-                
-        threading.Thread(target=contar, daemon=True).start()
+                estado_timer["rodando"] = False
+                try:
+                    txt_timer_foco.update()
+                    anel_progresso.update()
+                except Exception:
+                    pass
+
+        page.run_task(contar)
 
     # --- MONTAGEM DAS ABAS E TELAS ---
     cartao_foco = criar_cartao("Modo Foco", ft.Row([dropdown_foco, ft.ElevatedButton("Iniciar", on_click=iniciar_timer, bgcolor="#3A86FF", color=ft.Colors.WHITE)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), ft.Icons.TIMER, "#3A86FF")
     
-    aba_saude = ft.ListView(padding=20, controls=[cartao_agua, criar_cartao("Treinos", ft.Column([comp_nova_tarefa(coluna_treinos, checks_treinos, "Ex: Corrida...", "#FF3D00", "treinos"), coluna_treinos]), ft.Icons.DIRECTIONS_RUN, "#FF3D00")])
+    aba_saude = ft.ListView(padding=20, controls=[cartao_agua, criar_cartao("Treinos", ft.Column([comp_novo_treino(coluna_treinos, checks_treinos, "#FF3D00", "treinos"), ft.Divider(color="#374151"), coluna_treinos]), ft.Icons.DIRECTIONS_RUN, "#FF3D00")])
+    
     aba_trabalho = ft.ListView(padding=20, controls=[cartao_foco, criar_cartao("Trabalho", ft.Column([comp_nova_tarefa(coluna_trab, checks_trabalho, "Tarefas do serviço...", "#3A86FF", "trabalho"), coluna_trab]), ft.Icons.WORK, "#3A86FF"), criar_cartao("Estudos", ft.Column([comp_nova_tarefa(coluna_estudos, checks_estudos, "Ex: Livros, cursos...", "#FFBE0B", "estudos"), coluna_estudos]), ft.Icons.MENU_BOOK, "#FFBE0B")])
     aba_familia = ft.ListView(padding=20, controls=[criar_cartao("Casa", ft.Column([comp_nova_tarefa(coluna_casa, checks_casa, "Tarefas de casa...", "#9CA3AF", "casa"), coluna_casa]), ft.Icons.HOME, "#9CA3AF"), criar_cartao("Família", ft.Column([comp_nova_tarefa(coluna_familia, checks_familia, "Passeios, qualidade...", "#F472B6", "familia"), coluna_familia]), ft.Icons.FAMILY_RESTROOM, "#F472B6")])
 
     area_conteudo = ft.Container(content=aba_saude, expand=True)
 
     def criar_botao_aba(icone, texto, index):
-        return ft.Container(content=ft.Row([ft.Icon(icone, size=14), ft.Text(texto, size=10, weight=ft.FontWeight.BOLD)]), padding=ft.padding.symmetric(vertical=10, horizontal=5), on_click=lambda e, i=index: mudar_aba(i), ink=True)
+        return ft.Container(content=ft.Row([ft.Icon(icone, size=14), ft.Text(texto, size=10, weight=ft.FontWeight.BOLD)]), padding=ft.padding.only(top=10, bottom=10, left=5, right=5), on_click=lambda e, i=index: mudar_aba(i), ink=True)
 
     botoes_abas = [criar_botao_aba(ft.Icons.FAVORITE, "Treinos & Saúde", 0), criar_botao_aba(ft.Icons.WORK, "Trabalhos & Estudos", 1), criar_botao_aba(ft.Icons.HOME, "Casa & Família", 2)]
 
@@ -422,7 +485,7 @@ def main(page: ft.Page):
             borda = "#00E5FF" if i == index_ativo else ft.Colors.TRANSPARENT
             btn.content.controls[0].color = cor
             btn.content.controls[1].color = cor
-            btn.border = ft.border.only(bottom=ft.border.BorderSide(3, borda))
+            btn.border = ft.border.only(bottom=ft.BorderSide(3, borda))
             
     def mudar_aba(index):
         area_conteudo.content = [aba_saude, aba_trabalho, aba_familia][index]
@@ -435,7 +498,8 @@ def main(page: ft.Page):
     carregar_dados_do_dia()
 
     page.add(ft.Stack([
-        ft.Column([cabecalho, barra_semana, menu_abas, area_conteudo], expand=True)
+        ft.Column([cabecalho, barra_semana, menu_abas, area_conteudo], expand=True),
+        tela_foco 
     ], expand=True))
 
 ft.app(target=main)
