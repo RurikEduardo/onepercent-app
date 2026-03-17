@@ -374,7 +374,7 @@ def main(page: ft.Page):
 
     dropdown_foco = ft.Dropdown(options=[ft.dropdown.Option("1 min"), ft.dropdown.Option("15 min"), ft.dropdown.Option("30 min"), ft.dropdown.Option("45 min"), ft.dropdown.Option("60 min")], width=120, value="30 min", dense=True, bgcolor="#1F2937", border_color=ft.Colors.TRANSPARENT)
 
-    def iniciar_timer(e):
+   def iniciar_timer(e):
         minutos = int(dropdown_foco.value.split()[0])
         estado_timer["segundos"] = minutos * 60
         estado_timer["rodando"] = True
@@ -383,22 +383,28 @@ def main(page: ft.Page):
         anel_progresso.value = 1.0
         txt_timer_foco.value = f"{minutos:02d}:00"
         page.update()
+        
         def contar():
             total = estado_timer["segundos"]
             while estado_timer["segundos"] > 0 and estado_timer["rodando"]:
                 m, s = divmod(estado_timer["segundos"], 60)
                 txt_timer_foco.value = f"{m:02d}:{s:02d}"
                 anel_progresso.value = estado_timer["segundos"] / total
-                txt_timer_foco.update()
-                anel_progresso.update()
+                
+                # A MÁGICA PARA O ANDROID ESTÁ AQUI:
+                # Usamos page.update() para forçar o Android a redesenhar a tela
+                page.update() 
+                
                 time.sleep(1)
+                
                 if not estado_timer["rodando"]: break
                 estado_timer["segundos"] -= 1
+                
             if estado_timer["segundos"] <= 0 and estado_timer["rodando"]:
                 txt_timer_foco.value = "FEITO!"
                 anel_progresso.color = ft.Colors.GREEN_400
-                txt_timer_foco.update()
-                anel_progresso.update()
+                page.update()
+                
         threading.Thread(target=contar, daemon=True).start()
 
     # --- MONTAGEM DAS ABAS E TELAS ---
