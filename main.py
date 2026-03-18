@@ -52,10 +52,10 @@ def main(page: ft.Page):
     dia_selecionado = dias_semana[hoje.weekday()]
 
     # --- GRÁFICO DE RADAR ---
-    texto_porcentagem = ft.Text("0%", size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)
-    tamanho_radar = 180 
+    texto_porcentagem = ft.Text("0%", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)
+    tamanho_radar = 150 
     cx, cy = tamanho_radar / 2, tamanho_radar / 2
-    R = tamanho_radar / 2 - 30 
+    R = tamanho_radar / 2 - 25 
 
     forma_fundo = cv.Path(
         [
@@ -92,26 +92,17 @@ def main(page: ft.Page):
 
         geral = (concluidas / total_items) if total_items > 0 else 0
         texto_porcentagem.value = f"{int(geral * 100)}%"
-        
-        if geral == 1.0:
-            if not estado_gamificacao["dias_cumpridos_hoje"]:
-                estado_gamificacao["dias_cumpridos_hoje"] = True
-                estado_gamificacao["dias_cumpridos_semana"] += 1
-                if estado_gamificacao["dias_cumpridos_semana"] >= 5 and estado_gamificacao["nivel"] == 1:
-                    estado_gamificacao["nivel"] = 2
-                    badges_gamificacao.controls[1].content.controls[1].value = "Nível 2"
-                    badges_gamificacao.update()
         page.update()
 
     bloco_radar = ft.Stack([
         ft.Container(canvas_radar, alignment=ft.Alignment(0, 0)),
         ft.Container(texto_porcentagem, width=tamanho_radar, height=tamanho_radar, alignment=ft.Alignment(0, 0)),
-        ft.Container(ft.Text("Treinos", size=10, weight="bold", color="#FF3D00"), top=0, left=cx-18),
-        ft.Container(ft.Text("Água", size=10, weight="bold", color="#00E5FF"), top=40, right=0),
-        ft.Container(ft.Text("Trab", size=10, weight="bold", color="#3A86FF"), bottom=40, right=0),
-        ft.Container(ft.Text("Estudos", size=10, weight="bold", color="#FFBE0B"), bottom=0, left=cx-18),
-        ft.Container(ft.Text("Casa", size=10, weight="bold", color="#9CA3AF"), bottom=40, left=0),
-        ft.Container(ft.Text("Família", size=10, weight="bold", color="#F472B6"), top=40, left=0),
+        ft.Container(ft.Text("Treinos", size=9, weight="bold", color="#FF3D00"), top=5, left=cx-20),
+        ft.Container(ft.Text("Água", size=9, weight="bold", color="#00E5FF"), top=35, right=5),
+        ft.Container(ft.Text("Trab", size=9, weight="bold", color="#3A86FF"), bottom=35, right=5),
+        ft.Container(ft.Text("Estudos", size=9, weight="bold", color="#FFBE0B"), bottom=5, left=cx-20),
+        ft.Container(ft.Text("Casa", size=9, weight="bold", color="#9CA3AF"), bottom=35, left=5),
+        ft.Container(ft.Text("Família", size=9, weight="bold", color="#F472B6"), top=35, left=5),
     ], width=tamanho_radar, height=tamanho_radar)
 
     # --- POP-UP DAS MÉTRICAS ---
@@ -170,6 +161,28 @@ def main(page: ft.Page):
     )
     page.overlay.append(modal_metricas)
 
+    # --- POP-UP DE ALERTA DE TREINO (O ALARME) ---
+    def fechar_alerta_treino(e):
+        modal_alerta_treino.open = False
+        page.update()
+
+    texto_alerta_treino = ft.Text("", size=16, color=ft.Colors.WHITE, text_align=ft.TextAlign.CENTER)
+    
+    modal_alerta_treino = ft.AlertDialog(
+        modal=False,
+        title=ft.Row([ft.Icon(ft.Icons.WARNING_AMBER_ROUNDED, color="#FF3D00", size=30), ft.Text("HORA DO TREINO!", color="#FF3D00", weight="bold")], alignment=ft.MainAxisAlignment.CENTER),
+        content=ft.Container(width=250, content=texto_alerta_treino, alignment=ft.Alignment(0, 0)),
+        actions=[ft.ElevatedButton("BORA LÁ!", on_click=fechar_alerta_treino, bgcolor="#00E5FF", color=ft.Colors.BLACK)],
+        actions_alignment=ft.MainAxisAlignment.CENTER,
+        bgcolor="#111827", shape=ft.RoundedRectangleBorder(radius=16)
+    )
+    page.overlay.append(modal_alerta_treino)
+
+    def disparar_alarme_na_tela(exercicios):
+        texto_alerta_treino.value = f"Seu horário chegou.\nPrepare-se para o treino:\n\n{exercicios}"
+        modal_alerta_treino.open = True
+        page.update()
+
     c.execute("SELECT peso, altura, meta FROM metricas WHERE id=1")
     row_metrics = c.fetchone()
     if row_metrics:
@@ -179,10 +192,10 @@ def main(page: ft.Page):
         calc_imc(None)
         calc_meta(None)
 
-    # --- EMBLEMAS E CABEÇALHO ---
+    # --- EMBLEMAS E CABEÇALHO COMPACTADO ---
     badges_gamificacao = ft.Row([
-        ft.Container(content=ft.Row([ft.Icon(ft.Icons.LOCAL_FIRE_DEPARTMENT, color="#FFBE0B", size=16), ft.Text("1 Dia", size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)]), bgcolor="#1F2937", padding=ft.padding.only(left=8, right=8, top=4, bottom=4), border_radius=12),
-        ft.Container(content=ft.Row([ft.Icon(ft.Icons.ROCKET_LAUNCH, color="#00E5FF", size=16), ft.Text("Nível 1", size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)]), bgcolor="#1F2937", padding=ft.padding.only(left=8, right=8, top=4, bottom=4), border_radius=12)
+        ft.Container(content=ft.Row([ft.Icon(ft.Icons.LOCAL_FIRE_DEPARTMENT, color="#FFBE0B", size=14), ft.Text("1 Dia", size=10, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)]), bgcolor="#1F2937", padding=ft.padding.only(left=6, right=6, top=2, bottom=2), border_radius=12),
+        ft.Container(content=ft.Row([ft.Icon(ft.Icons.ROCKET_LAUNCH, color="#00E5FF", size=14), ft.Text("Nível 1", size=10, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)]), bgcolor="#1F2937", padding=ft.padding.only(left=6, right=6, top=2, bottom=2), border_radius=12)
     ])
 
     arte_cabecalho = cv.Canvas(
@@ -197,22 +210,22 @@ def main(page: ft.Page):
     cabecalho = ft.Stack([
         arte_cabecalho, 
         ft.Container(
-            padding=ft.padding.only(top=30, left=20, right=20, bottom=15),
+            padding=ft.padding.only(top=20, left=15, right=15, bottom=5),
             content=ft.Row([
                 ft.Column([
                     ft.Row([
-                        ft.IconButton(icon=ft.Icons.PERSON, icon_color=ft.Colors.WHITE, icon_size=20, on_click=abrir_modal_metricas, tooltip="Status do Personagem", padding=0),
-                        ft.Text(texto_data, size=14, color="#00E5FF", weight=ft.FontWeight.BOLD)
+                        ft.IconButton(icon=ft.Icons.PERSON, icon_color=ft.Colors.WHITE, icon_size=18, on_click=abrir_modal_metricas, tooltip="Status do Personagem", padding=0),
+                        ft.Text(texto_data, size=12, color="#00E5FF", weight=ft.FontWeight.BOLD)
                     ], alignment=ft.MainAxisAlignment.START, spacing=5), 
-                    ft.Text("Evolua 1%", size=24, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
-                    ft.Text("todos os dias!", size=24, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
-                    ft.Container(height=2),
-                    ft.Text("A constância constrói resultados.", size=12, color="#9CA3AF"),
-                    ft.Container(height=8),
+                    ft.Text("Evolua 1%", size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                    ft.Text("todos os dias!", size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                    ft.Container(height=1),
+                    ft.Text("A constância constrói resultados.", size=11, color="#9CA3AF"),
+                    ft.Container(height=5),
                     badges_gamificacao
                 ], expand=True),
                 bloco_radar
-            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.START)
         )
     ])
 
@@ -245,7 +258,7 @@ def main(page: ft.Page):
 
     cartao_agua = criar_cartao("Hidratação", ft.Column([ft.Row([ft.Column([ft.Text("Meta (L)", size=12, color="#9CA3AF"), agua_meta_input]), txt_agua_atual, ft.ElevatedButton("250ml", icon=ft.Icons.ADD, on_click=beber_agua, bgcolor="#00E5FF", color=ft.Colors.BLACK)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), barra_agua]), ft.Icons.WATER_DROP, "#00E5FF")
 
-    # --- TAREFAS DINÂMICAS ---
+    # --- TAREFAS DINÂMICAS COMUNS ---
     coluna_treinos, coluna_trab, coluna_estudos, coluna_casa, coluna_familia = ft.Column(), ft.Column(), ft.Column(), ft.Column(), ft.Column()
 
     def criar_tarefa_ui(texto, coluna_destino, lista_checks, cor, categoria, task_id=None, concluida=False):
@@ -285,33 +298,70 @@ def main(page: ft.Page):
             if campo.value: criar_tarefa_ui(campo.value, coluna_destino, lista_checks, cor, categoria); campo.value = ""; page.update()
         return ft.Row([campo, ft.IconButton(icon=ft.Icons.ADD_BOX, icon_color=cor, icon_size=35, on_click=add)])
 
-    # --- O NOVO FORMULÁRIO DE TREINOS COM DETALHES AVANÇADOS ---
-    def comp_novo_treino(coluna_destino, lista_checks, cor, categoria):
-        campo_titulo = ft.TextField(hint_text="Título (Ex: Peito, Corrida)", text_size=14, expand=True, dense=True, bgcolor="#1F2937", border_radius=8, border_color=ft.Colors.TRANSPARENT)
-        campo_exercicio = ft.TextField(hint_text="Exercício (Ex: Supino Reto)", text_size=14, expand=True, dense=True, bgcolor="#1F2937", border_radius=8, border_color=ft.Colors.TRANSPARENT)
-        campo_reps = ft.TextField(hint_text="Reps/Séries (Opcional)", text_size=12, expand=1, dense=True, bgcolor="#1F2937", border_radius=8, border_color=ft.Colors.TRANSPARENT)
-        campo_peso = ft.TextField(hint_text="Peso (Opcional)", text_size=12, expand=1, dense=True, bgcolor="#1F2937", border_radius=8, border_color=ft.Colors.TRANSPARENT)
+    # --- O FORMULÁRIO DE TREINOS COM ALARME ---
+    hora_temp = {"selecionada": ""}
+
+    def on_time_change(e):
+        if time_picker.value:
+            h = f"{time_picker.value.hour:02d}:{time_picker.value.minute:02d}"
+            hora_temp["selecionada"] = h
+            btn_abrir_relogio.icon = ft.Icons.ALARM_ON
+            btn_abrir_relogio.icon_color = "#39FF14"
+            txt_hora_badge.value = h
+            page.update()
+
+    time_picker = ft.TimePicker(
+        confirm_text="Confirmar",
+        error_invalid_text="Hora inválida",
+        help_text="Selecione o horário do treino",
+        on_change=on_time_change
+    )
+    page.overlay.append(time_picker)
+
+    btn_abrir_relogio = ft.IconButton(icon=ft.Icons.ALARM_ADD, icon_color="#9CA3AF", tooltip="Definir Alarme", icon_size=20, on_click=lambda _: setattr(time_picker, 'open', True) or page.update())
+    txt_hora_badge = ft.Text("", size=11, color="#39FF14", weight="bold")
+
+    def comp_novo_treino(cor):
+        campo_titulo = ft.TextField(hint_text="Título (Ex: Pull, Legs)", text_size=14, expand=True, dense=True, bgcolor="#1F2937", border_radius=8, border_color=ft.Colors.TRANSPARENT)
+        campo_exercicio = ft.TextField(hint_text="Exercício (Ex: Afundo)", text_size=14, expand=True, dense=True, bgcolor="#1F2937", border_radius=8, border_color=ft.Colors.TRANSPARENT)
+        campo_reps = ft.TextField(hint_text="Reps/Séries", text_size=12, expand=1, dense=True, bgcolor="#1F2937", border_radius=8, border_color=ft.Colors.TRANSPARENT)
+        campo_peso = ft.TextField(hint_text="Peso (kg)", text_size=12, expand=1, dense=True, bgcolor="#1F2937", border_radius=8, border_color=ft.Colors.TRANSPARENT)
         
         def add(e):
             if campo_titulo.value and campo_exercicio.value:
-                texto_final = f"[{campo_titulo.value}] {campo_exercicio.value}"
-                detalhes = []
-                if campo_reps.value: detalhes.append(f"{campo_reps.value}")
-                if campo_peso.value: detalhes.append(f"{campo_peso.value}")
-                if detalhes: texto_final += f"\n↳ " + " | ".join(detalhes)
+                h_salvar = hora_temp["selecionada"]
+                texto_final = f"{campo_titulo.value}|||{campo_exercicio.value}|||{campo_reps.value}|||{campo_peso.value}|||{h_salvar}"
                     
-                criar_tarefa_ui(texto_final, coluna_destino, lista_checks, cor, categoria)
+                c.execute("INSERT INTO tarefas (dia, categoria, texto, concluida) VALUES (?, ?, ?, 0)", (dia_selecionado, "treinos", texto_final))
+                conn.commit()
                 
                 campo_exercicio.value = ""
                 campo_reps.value = ""
                 campo_peso.value = ""
+                carregar_dados_do_dia()
                 page.update()
                 
         return ft.Column([
             campo_titulo,
             campo_exercicio,
-            ft.Row([campo_reps, campo_peso, ft.IconButton(icon=ft.Icons.ADD_BOX, icon_color=cor, icon_size=35, on_click=add, padding=ft.padding.only(top=8))])
+            ft.Row([
+                campo_reps, 
+                campo_peso, 
+                ft.Row([btn_abrir_relogio, txt_hora_badge], spacing=0),
+                ft.IconButton(icon=ft.Icons.ADD_BOX, icon_color=cor, icon_size=35, on_click=add, padding=ft.padding.only(top=8))
+            ])
         ], spacing=5)
+
+    def on_check_treino(e, tid, c_obj):
+        c.execute("UPDATE tarefas SET concluida=? WHERE id=?", (int(c_obj.value), tid))
+        conn.commit()
+        atualizar_progresso()
+
+    def remover_treino(e, tid):
+        c.execute("DELETE FROM tarefas WHERE id=?", (tid,))
+        conn.commit()
+        carregar_dados_do_dia()
+        page.update()
 
     def carregar_dados_do_dia():
         nonlocal agua_atual
@@ -343,15 +393,96 @@ def main(page: ft.Page):
 
         if tarefas:
             for task_id, cat, txt, concluida in tarefas:
-                if cat == "treinos": criar_tarefa_ui(txt, coluna_treinos, checks_treinos, "#FF3D00", cat, task_id, bool(concluida))
-                elif cat == "trabalho": criar_tarefa_ui(txt, coluna_trab, checks_trabalho, "#3A86FF", cat, task_id, bool(concluida))
+                if cat == "trabalho": criar_tarefa_ui(txt, coluna_trab, checks_trabalho, "#3A86FF", cat, task_id, bool(concluida))
                 elif cat == "estudos": criar_tarefa_ui(txt, coluna_estudos, checks_estudos, "#FFBE0B", cat, task_id, bool(concluida))
                 elif cat == "casa": criar_tarefa_ui(txt, coluna_casa, checks_casa, "#9CA3AF", cat, task_id, bool(concluida))
                 elif cat == "familia": criar_tarefa_ui(txt, coluna_familia, checks_familia, "#F472B6", cat, task_id, bool(concluida))
+
+            # --- RENDERIZAÇÃO DA TABELA DE TREINOS COM ALOGICA CONDICIONAL DE CABEÇALHO ---
+            treinos_do_dia = [t for t in tarefas if t[1] == "treinos"]
+            grupos_treino = {}
+            
+            for task_id, cat, txt, concluida in treinos_do_dia:
+                partes = txt.split("|||")
+                alarme_salvo = ""
+                if len(partes) >= 4:
+                    titulo = partes[0]
+                    ex = partes[1]
+                    reps = partes[2]
+                    peso = partes[3]
+                    if len(partes) == 5:
+                        alarme_salvo = partes[4]
+                else:
+                    titulo = "Outros"
+                    ex = txt
+                    reps = ""
+                    peso = ""
+                
+                if titulo not in grupos_treino: 
+                    grupos_treino[titulo] = []
+                grupos_treino[titulo].append((task_id, ex, reps, peso, alarme_salvo, bool(concluida)))
+
+            for titulo, exs in grupos_treino.items():
+                alarme_do_grupo = ""
+                for _, _, _, _, alarme, _ in exs:
+                    if alarme:
+                        alarme_do_grupo = alarme
+                        break 
+                
+                # AQUI ESTÁ A MÁGICA DO ALINHAMENTO CONDICIONAL
+                if alarme_do_grupo and titulo != "Outros":
+                    conteudo_header = ft.Row([
+                        # Titulo na esquerda
+                        ft.Text(titulo.upper(), weight="bold", size=14, color=ft.Colors.WHITE),
+                        # Alarme na direita
+                        ft.Row([
+                            ft.Icon(ft.Icons.ALARM, size=14, color="#39FF14"), 
+                            ft.Text(alarme_do_grupo, size=12, color="#39FF14", weight="bold")
+                        ], spacing=2)
+                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
+                else:
+                    # Titulo centralizado quando não tem alarme
+                    conteudo_header = ft.Container(content=ft.Text(titulo.upper(), weight="bold", size=14, color=ft.Colors.WHITE), alignment=ft.Alignment(0, 0))
+
+                coluna_treinos.controls.append(
+                    ft.Container(
+                        content=conteudo_header,
+                        bgcolor="#374151",
+                        padding=ft.padding.symmetric(vertical=4, horizontal=10),
+                        border_radius=8,
+                        margin=ft.margin.only(top=10, bottom=5)
+                    )
+                )
+                
+                if titulo != "Outros":
+                    coluna_treinos.controls.append(
+                        ft.Row([
+                            ft.Container(width=30), 
+                            ft.Text("Exercício", size=11, color="#9CA3AF", weight="bold", expand=True),
+                            ft.Text("Reps", size=11, color="#9CA3AF", weight="bold", width=45, text_align=ft.TextAlign.CENTER),
+                            ft.Text("Peso", size=11, color="#9CA3AF", weight="bold", width=45, text_align=ft.TextAlign.CENTER),
+                            ft.Container(width=30) 
+                        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
+                    )
+
+                for task_id, ex, reps, peso, _, concluida in exs:
+                    chk = ft.Checkbox(value=bool(concluida), fill_color="#FF3D00")
+                    checks_treinos.append(chk)
+                    chk.on_change = lambda e, tid=task_id, c_obj=chk: on_check_treino(e, tid, c_obj)
+                    
+                    linha = ft.Row([
+                        ft.Container(chk, width=30),
+                        ft.Text(ex, size=13, expand=True), 
+                        ft.Text(reps if reps else "-", size=12, color="#D1D5DB", width=45, text_align=ft.TextAlign.CENTER),
+                        ft.Text(peso if peso else "-", size=12, color="#D1D5DB", width=45, text_align=ft.TextAlign.CENTER),
+                        ft.IconButton(icon=ft.Icons.DELETE_ROUNDED, icon_color="#EF4444", icon_size=18, padding=0, width=30, on_click=lambda e, tid=task_id: remover_treino(e, tid))
+                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.CENTER)
+                    
+                    coluna_treinos.controls.append(linha)
         
         atualizar_progresso()
 
-    # --- BARRA DE SEMANA ---
+    # --- BARRA DE SEMANA COMPACTADA ---
     botoes_dias = []
     def on_click_dia(e, d):
         nonlocal dia_selecionado
@@ -367,12 +498,14 @@ def main(page: ft.Page):
             data=d,
             content=ft.Text(d, weight=ft.FontWeight.BOLD, color="#000000" if d == dia_selecionado else ft.Colors.WHITE),
             bgcolor="#00E5FF" if d == dia_selecionado else "#1F2937",
-            border_radius=10, padding=ft.padding.only(left=14, right=14, top=8, bottom=8), alignment=ft.Alignment(0, 0),
+            border_radius=10, 
+            padding=ft.padding.only(left=10, right=10, top=6, bottom=6), 
+            alignment=ft.Alignment(0, 0),
             on_click=lambda e, dia=d: on_click_dia(e, dia)
         )
         botoes_dias.append(btn)
 
-    barra_semana = ft.Container(content=ft.Row(botoes_dias, scroll="auto", alignment=ft.MainAxisAlignment.SPACE_BETWEEN), padding=ft.padding.only(left=20, right=20, bottom=20))
+    barra_semana = ft.Container(content=ft.Row(botoes_dias, scroll="auto", alignment=ft.MainAxisAlignment.SPACE_BETWEEN), padding=ft.padding.only(left=20, right=20, bottom=10))
 
     # --- MODO FOCO ---
     txt_timer_foco = ft.Text("00:00", size=70, weight=ft.FontWeight.W_300, color=ft.Colors.WHITE)
@@ -458,7 +591,7 @@ def main(page: ft.Page):
     # --- MONTAGEM DAS ABAS E TELAS ---
     cartao_foco = criar_cartao("Modo Foco", ft.Row([dropdown_foco, ft.ElevatedButton("Iniciar", on_click=iniciar_timer, bgcolor="#3A86FF", color=ft.Colors.WHITE)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), ft.Icons.TIMER, "#3A86FF")
     
-    aba_saude = ft.ListView(padding=20, controls=[cartao_agua, criar_cartao("Treinos", ft.Column([comp_novo_treino(coluna_treinos, checks_treinos, "#FF3D00", "treinos"), ft.Divider(color="#374151"), coluna_treinos]), ft.Icons.DIRECTIONS_RUN, "#FF3D00")])
+    aba_saude = ft.ListView(padding=20, controls=[cartao_agua, criar_cartao("Treinos", ft.Column([comp_novo_treino("#FF3D00"), ft.Divider(color="#374151"), coluna_treinos]), ft.Icons.DIRECTIONS_RUN, "#FF3D00")])
     
     aba_trabalho = ft.ListView(padding=20, controls=[cartao_foco, criar_cartao("Trabalho", ft.Column([comp_nova_tarefa(coluna_trab, checks_trabalho, "Tarefas do serviço...", "#3A86FF", "trabalho"), coluna_trab]), ft.Icons.WORK, "#3A86FF"), criar_cartao("Estudos", ft.Column([comp_nova_tarefa(coluna_estudos, checks_estudos, "Ex: Livros, cursos...", "#FFBE0B", "estudos"), coluna_estudos]), ft.Icons.MENU_BOOK, "#FFBE0B")])
     aba_familia = ft.ListView(padding=20, controls=[criar_cartao("Casa", ft.Column([comp_nova_tarefa(coluna_casa, checks_casa, "Tarefas de casa...", "#9CA3AF", "casa"), coluna_casa]), ft.Icons.HOME, "#9CA3AF"), criar_cartao("Família", ft.Column([comp_nova_tarefa(coluna_familia, checks_familia, "Passeios, qualidade...", "#F472B6", "familia"), coluna_familia]), ft.Icons.FAMILY_RESTROOM, "#F472B6")])
@@ -488,7 +621,7 @@ def main(page: ft.Page):
 
     carregar_dados_do_dia()
 
-    # --- TELA DE LOGIN/CADASTRO COM O VERSÍCULO E AJUSTES ---
+    # --- TELA DE LOGIN/CADASTRO ---
     usuario_logado = False 
 
     email_input = ft.TextField(
@@ -521,12 +654,9 @@ def main(page: ft.Page):
         left=0, top=0, right=0, bottom=0,
         bgcolor="#F2050A15",
         content=ft.Column([
-            # --- AJUSTE DE POSIÇÃO (Conteúdo para cima) ---
-            ft.Container(height=50), # Espaço no topo reduzido de 120 para 50
+            ft.Container(height=50), 
             
-            # --- SUBSTITUIÇÃO DO ÍCONE (Foguinho Laranja e Maior) ---
-            # ft.Icon(ft.Icons.ROCKET_LAUNCH, color="#00E5FF", size=60), # Antigo
-            ft.Icon(ft.Icons.WHATSHOT, color="#FF9800", size=80), # Novo Foguinho Laranja (é um fogo motivacional)
+            ft.Icon(ft.Icons.WHATSHOT, color="#FF9800", size=80),
             
             ft.Text("OnePercent", size=32, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
             ft.Text("Sua evolução diária começa aqui.", size=14, color="#9CA3AF"),
@@ -570,8 +700,7 @@ def main(page: ft.Page):
                 on_click=fechar_tela_login,
             ),
             
-            # --- O VERSÍCULO NO RODAPÉ ---
-            ft.Container(expand=True), # Empurra o conteúdo abaixo para o final da tela
+            ft.Container(expand=True), 
             ft.Container(
                 content=ft.Column([
                     ft.Text(
@@ -581,13 +710,11 @@ def main(page: ft.Page):
                         text_align=ft.TextAlign.CENTER, 
                         italic=True
                     ),
-                    # --- AJUSTE DE COR (Referência Laranja) ---
                     ft.Text(
                         "Isaías 41:10", 
                         size=12, 
                         weight=ft.FontWeight.BOLD, 
-                        # color="#00E5FF", # Antigo Azul Neon
-                        color="#FF9800", # Novo Laranja
+                        color="#FF9800", 
                         text_align=ft.TextAlign.CENTER
                     ),
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=5),
@@ -603,4 +730,37 @@ def main(page: ft.Page):
         tela_abertura 
     ], expand=True))
 
+    # --- O MOTOR DO ALARME RODANDO NO FUNDO ---
+    alarmes_disparados = set() 
+
+    async def checar_relogio_alarme():
+        while True:
+            agora = datetime.datetime.now()
+            hora_atual_str = f"{agora.hour:02d}:{agora.minute:02d}"
+            hoje_str = dias_semana[agora.weekday()]
+
+            c.execute("SELECT id, texto, concluida FROM tarefas WHERE dia=? AND categoria='treinos'", (hoje_str,))
+            treinos = c.fetchall()
+
+            treinos_na_hora = set()
+
+            for tid, txt, concluida in treinos:
+                if not concluida and tid not in alarmes_disparados:
+                    partes = txt.split("|||")
+                    if len(partes) == 5:
+                        titulo, _, _, _, alarme = partes
+                        if alarme == hora_atual_str:
+                            treinos_na_hora.add(titulo) 
+                            alarmes_disparados.add(tid)
+
+            if treinos_na_hora:
+                lista_bonita = "\n".join([f"🔥 Treino: {t.upper()}" for t in treinos_na_hora])
+                disparar_alarme_na_tela(lista_bonita)
+
+            await asyncio.sleep(30) 
+
+    page.run_task(checar_relogio_alarme)
+
+
+# --- INICIALIZAÇÃO LIMPA E SEGURA ---
 ft.app(target=main)
