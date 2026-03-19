@@ -16,6 +16,11 @@ def main(page: ft.Page):
     page.padding = 0 
     page.bgcolor = "#050A15" 
 
+    # --- CARREGANDO SUA FONTE CUSTOMIZADA (OPCIONAL) ---
+    page.fonts = {
+        "FonteCustomizada": "assets/fonte.ttf" 
+    }
+
     # --- INICIALIZAÇÃO SEGURA DO BANCO DE DADOS (LOCAL) ---
     if page.platform == ft.PagePlatform.ANDROID or page.platform == ft.PagePlatform.IOS:
         caminho_base = os.environ.get("HOME", ".")
@@ -32,6 +37,7 @@ def main(page: ft.Page):
     c.execute('''CREATE TABLE IF NOT EXISTS tarefas (id INTEGER PRIMARY KEY AUTOINCREMENT, dia TEXT, categoria TEXT, texto TEXT, concluida INTEGER)''')
     c.execute('''CREATE TABLE IF NOT EXISTS agua (dia TEXT PRIMARY KEY, atual REAL, meta REAL)''')
     c.execute('''CREATE TABLE IF NOT EXISTS metricas (id INTEGER PRIMARY KEY, peso REAL, altura REAL, meta REAL)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS notas (id INTEGER PRIMARY KEY AUTOINCREMENT, texto TEXT)''')
     conn.commit()
 
     # --- VARIÁVEIS GLOBAIS ---
@@ -51,59 +57,103 @@ def main(page: ft.Page):
     dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
     dia_selecionado = dias_semana[hoje.weekday()]
 
-    # --- GRÁFICO DE RADAR ---
-    texto_porcentagem = ft.Text("0%", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)
-    tamanho_radar = 150 
-    cx, cy = tamanho_radar / 2, tamanho_radar / 2
-    R = tamanho_radar / 2 - 25 
+    # --- FUNÇÃO DO GRÁFICO DE RADAR GAMIFICADO (GRADIENTE RADIAL) ---
+    def criar_bloco_radar_gamificado(tamanho):
+        cx, cy = tamanho / 2, tamanho / 2
+        R = tamanho / 2 - 25 
 
-    forma_fundo = cv.Path(
-        [
-            cv.Path.MoveTo(cx, cy - R), cv.Path.LineTo(cx + R * 0.866, cy - R * 0.5), cv.Path.LineTo(cx + R * 0.866, cy + R * 0.5),
-            cv.Path.LineTo(cx, cy + R), cv.Path.LineTo(cx - R * 0.866, cy + R * 0.5), cv.Path.LineTo(cx - R * 0.866, cy - R * 0.5), cv.Path.LineTo(cx, cy - R)
-        ], paint=ft.Paint(style=ft.PaintingStyle.STROKE, color=ft.Colors.RED, stroke_width=2)
-    )
+        def get_hexagon_points(raio_hex):
+            p = []
+            import math
+            for i in range(6):
+                angle = math.radians(60 * i + 30) 
+                p.append(cv.Path.LineTo(cx + raio_hex * math.cos(angle), cy + raio_hex * math.sin(angle)))
+            p.append(cv.Path.LineTo(p[0].x, p[0].y)) 
+            return p
 
-    forma_dinamica = cv.Path([], paint=ft.Paint(style=ft.PaintingStyle.FILL, color="#99FFFF00"))
-    canvas_radar = cv.Canvas([forma_fundo, forma_dinamica], width=tamanho_radar, height=tamanho_radar)
+        # 1. Estrutura da Teia (Cinza Concêntrico)
+        interior_path_elements = []
+        for pct in [0.2, 0.4, 0.6, 0.8]:
+            raio_hex = R * pct
+            points = get_hexagon_points(raio_hex)
+            interior_path_elements.append(cv.Path.MoveTo(points[0].x, points[0].y))
+            interior_path_elements.extend(points[1:])
 
-    def atualizar_progresso(e=None):
-        def calc_pct(lista):
-            return sum(1 for c in lista if c.value) / len(lista) if len(lista) > 0 else 0
+        forma_interna = cv.Path(interior_path_elements, paint=ft.Paint(style=ft.PaintingStyle.STROKE, color="#55AAAAAA", stroke_width=1))
 
-        pct_treinos, pct_trab, pct_estudos = calc_pct(checks_treinos), calc_pct(checks_trabalho), calc_pct(checks_estudos)
-        pct_casa, pct_familia = calc_pct(checks_casa), calc_pct(checks_familia)
-        
-        meta_agua = float(agua_meta_input.value.replace(',', '.')) if agua_meta_input.value else 3.0
-        pct_agua = min(1.0, agua_atual / meta_agua) if meta_agua > 0 else 0
+        # 2. Hexágono Externo (Vermelho)
+        externo_points = get_hexagon_points(R)
+        forma_externa = cv.Path([cv.Path.MoveTo(externo_points[0].x, externo_points[0].y)] + externo_points[1:], paint=ft.Paint(style=ft.PaintingStyle.STROKE, color=ft.Colors.RED, stroke_width=2))
 
-        r_tre, r_agu, r_tra = R * max(0.05, pct_treinos), R * max(0.05, pct_agua), R * max(0.05, pct_trab)
-        r_est, r_cas, r_fam = R * max(0.05, pct_estudos), R * max(0.05, pct_casa), R * max(0.05, pct_familia)
-        
-        forma_dinamica.elements = [
-            cv.Path.MoveTo(cx, cy - r_tre), cv.Path.LineTo(cx + r_agu * 0.866, cy - r_agu * 0.5),
-            cv.Path.LineTo(cx + r_tra * 0.866, cy + r_tra * 0.5), cv.Path.LineTo(cx, cy + r_est),
-            cv.Path.LineTo(cx - r_cas * 0.866, cy + r_cas * 0.5), cv.Path.LineTo(cx - r_fam * 0.866, cy - r_fam * 0.5), cv.Path.LineTo(cx, cy - r_tre),
-        ]
+        # 3. Linhas de Eixo (Cinza)
+        eixo_path_elements = []
+        for p in externo_points[:-1]:
+            eixo_path_elements.append(cv.Path.MoveTo(cx, cy))
+            eixo_path_elements.append(cv.Path.LineTo(p.x, p.y))
+        forma_eixos = cv.Path(eixo_path_elements, paint=ft.Paint(style=ft.PaintingStyle.STROKE, color="#55AAAAAA", stroke_width=1))
 
-        total_items = len(checks_treinos) + len(checks_trabalho) + len(checks_estudos) + len(checks_casa) + len(checks_familia) + 1 
-        concluidas = sum(1 for c in checks_treinos + checks_trabalho + checks_estudos + checks_casa + checks_familia if c.value)
-        if pct_agua >= 1.0: concluidas += 1
+        # 4. PREENCHIMENTO: Gradiente Radial Roxo pro Amarelo com 75% de Opacidade (Código Hexadecimal BF)
+        gradiente_radar = ft.PaintRadialGradient(
+            center=ft.Offset(cx, cy),
+            radius=R,
+            colors=["#BF9C27B0", "#BFFFEB3B"] # BF = 75% Opacidade, Roxo no centro e Amarelo na borda
+        )
+        forma_dinamica = cv.Path([], paint=ft.Paint(style=ft.PaintingStyle.FILL, gradient=gradiente_radar))
 
-        geral = (concluidas / total_items) if total_items > 0 else 0
-        texto_porcentagem.value = f"{int(geral * 100)}%"
-        page.update()
+        # IMPORTANTE: Coloquei a forma_dinamica PRIMEIRO, assim as linhas da teia ficam POR CIMA do gradiente!
+        canvas_radar = cv.Canvas([forma_dinamica, forma_interna, forma_eixos, forma_externa], width=tamanho, height=tamanho)
 
-    bloco_radar = ft.Stack([
-        ft.Container(canvas_radar, alignment=ft.Alignment(0, 0)),
-        ft.Container(texto_porcentagem, width=tamanho_radar, height=tamanho_radar, alignment=ft.Alignment(0, 0)),
-        ft.Container(ft.Text("Treinos", size=9, weight="bold", color="#FF3D00"), top=5, left=cx-20),
-        ft.Container(ft.Text("Água", size=9, weight="bold", color="#00E5FF"), top=35, right=5),
-        ft.Container(ft.Text("Trab", size=9, weight="bold", color="#3A86FF"), bottom=35, right=5),
-        ft.Container(ft.Text("Estudos", size=9, weight="bold", color="#FFBE0B"), bottom=5, left=cx-20),
-        ft.Container(ft.Text("Casa", size=9, weight="bold", color="#9CA3AF"), bottom=35, left=5),
-        ft.Container(ft.Text("Família", size=9, weight="bold", color="#F472B6"), top=35, left=5),
-    ], width=tamanho_radar, height=tamanho_radar)
+        # 5. Texto Central
+        texto_central_ui = ft.Text("0%", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)
+
+        def atualizar_progresso(e=None):
+            def calc_pct(lista):
+                return sum(1 for c in lista if c.value) / len(lista) if len(lista) > 0 else 0
+
+            pct_treinos, pct_trab, pct_estudos = calc_pct(checks_treinos), calc_pct(checks_trabalho), calc_pct(checks_estudos)
+            pct_casa, pct_familia = calc_pct(checks_casa), calc_pct(checks_familia)
+            
+            meta_agua = float(agua_meta_input.value.replace(',', '.')) if agua_meta_input.value else 3.0
+            pct_agua = min(1.0, agua_atual / meta_agua) if meta_agua > 0 else 0
+
+            r_tre, r_agu, r_tra = R * max(0.05, pct_treinos), R * max(0.05, pct_agua), R * max(0.05, pct_trab)
+            r_est, r_cas, r_fam = R * max(0.05, pct_estudos), R * max(0.05, pct_casa), R * max(0.05, pct_familia)
+            
+            p_dinamicos = [r_tre, r_agu, r_tra, r_est, r_cas, r_fam]
+            dinamico_points = []
+            import math
+            for i, raio in enumerate(p_dinamicos):
+                angle = math.radians(60 * i + 30) 
+                dinamico_points.append(cv.Path.LineTo(cx + raio * math.cos(angle), cy + raio * math.sin(angle)))
+            dinamico_points.append(cv.Path.LineTo(dinamico_points[0].x, dinamico_points[0].y)) 
+
+            forma_dinamica.elements = [cv.Path.MoveTo(dinamico_points[0].x, dinamico_points[0].y)] + dinamico_points[1:]
+
+            total_items = len(checks_treinos) + len(checks_trabalho) + len(checks_estudos) + len(checks_casa) + len(checks_familia) + 1 
+            concluidas = sum(1 for c in checks_treinos + checks_trabalho + checks_estudos + checks_casa + checks_familia if c.value)
+            if pct_agua >= 1.0: concluidas += 1
+
+            geral = (concluidas / total_items) if total_items > 0 else 0
+            texto_central_ui.value = f"{int(geral * 100)}%"
+            page.update()
+
+        # Rótulos
+        rotulos_radar = ft.Stack([
+            ft.Container(canvas_radar, alignment=ft.Alignment(0, 0)),
+            ft.Container(ft.Text("Treinos", size=9, weight="bold", color="#FF3D00"), top=5, left=cx-20),
+            ft.Container(ft.Text("Água", size=9, weight="bold", color="#00E5FF"), top=35, right=5),
+            ft.Container(ft.Text("Trab", size=9, weight="bold", color="#3A86FF"), bottom=35, right=5),
+            ft.Container(ft.Text("Estudos", size=9, weight="bold", color="#FFBE0B"), bottom=5, left=cx-20),
+            ft.Container(ft.Text("Casa", size=9, weight="bold", color="#9CA3AF"), bottom=35, left=5),
+            ft.Container(ft.Text("Família", size=9, weight="bold", color="#F472B6"), top=35, left=5),
+        ], width=tamanho, height=tamanho)
+
+        bloco_radar_final = ft.Stack([
+            ft.Container(rotulos_radar, alignment=ft.Alignment(0, 0)),
+            ft.Container(texto_central_ui, width=tamanho, height=tamanho, alignment=ft.Alignment(0, 0)),
+        ], width=tamanho, height=tamanho)
+
+        return bloco_radar_final, atualizar_progresso
 
     # --- POP-UP DAS MÉTRICAS ---
     p_input = ft.TextField(label="Peso(kg)", label_style=ft.TextStyle(size=12), text_size=12, width=75, dense=True, bgcolor="#1F2937", border_color=ft.Colors.TRANSPARENT)
@@ -161,6 +211,66 @@ def main(page: ft.Page):
     )
     page.overlay.append(modal_metricas)
 
+    # --- POP-UP DE ANOTAÇÕES ---
+    lista_notas_ui = ft.Column(scroll=ft.ScrollMode.AUTO, expand=True, spacing=10)
+    input_nota = ft.TextField(hint_text="Escreva uma nova anotação...", expand=True, dense=True, bgcolor="#1F2937", border_color=ft.Colors.TRANSPARENT, text_size=13)
+
+    def carregar_notas():
+        lista_notas_ui.controls.clear()
+        c.execute("SELECT id, texto FROM notas")
+        for nid, txt in c.fetchall():
+            lista_notas_ui.controls.append(
+                ft.Row([
+                    ft.Icon(ft.Icons.SUBDIRECTORY_ARROW_RIGHT, color="#39FF14", size=14),
+                    ft.Text(txt, expand=True, size=13, color=ft.Colors.WHITE),
+                    ft.IconButton(ft.Icons.DELETE_OUTLINE, icon_color="#EF4444", icon_size=18, on_click=lambda e, id=nid: remover_nota(id), padding=0)
+                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.START)
+            )
+        page.update()
+
+    def add_nota(e):
+        if input_nota.value:
+            c.execute("INSERT INTO notas (texto) VALUES (?)", (input_nota.value,))
+            conn.commit()
+            input_nota.value = ""
+            carregar_notas()
+            input_nota.focus()
+
+    def remover_nota(nid):
+        c.execute("DELETE FROM notas WHERE id=?", (nid,))
+        conn.commit()
+        carregar_notas()
+
+    def fechar_modal_notas(e):
+        modal_notas.open = False
+        page.update()
+
+    def abrir_modal_notas(e):
+        carregar_notas()
+        modal_notas.open = True
+        page.update()
+
+    modal_notas = ft.AlertDialog(
+        modal=True,
+        title=ft.Row([ft.Icon(ft.Icons.EDIT_NOTE, color="#39FF14"), ft.Text("Anotações", color=ft.Colors.WHITE, size=18, weight="bold")]),
+        content=ft.Container(
+            width=300, height=350,
+            content=ft.Column([
+                ft.Row([
+                    input_nota, 
+                    ft.IconButton(ft.Icons.ADD_BOX, icon_color="#39FF14", icon_size=35, on_click=add_nota, padding=0)
+                ]),
+                ft.Divider(color="#374151"),
+                lista_notas_ui
+            ])
+        ),
+        actions=[
+            ft.ElevatedButton("Fechar", on_click=fechar_modal_notas, bgcolor="#1F2937", color=ft.Colors.WHITE)
+        ],
+        bgcolor="#111827", shape=ft.RoundedRectangleBorder(radius=16)
+    )
+    page.overlay.append(modal_notas)
+
     # --- POP-UP DE ALERTA DE TREINO (O ALARME) ---
     def fechar_alerta_treino(e):
         modal_alerta_treino.open = False
@@ -192,14 +302,16 @@ def main(page: ft.Page):
         calc_imc(None)
         calc_meta(None)
 
-    # --- EMBLEMAS E CABEÇALHO COMPACTADO ---
+    # --- EMBLEMAS E CABEÇALHO REESTRUTURADO ---
     badges_gamificacao = ft.Row([
         ft.Container(content=ft.Row([ft.Icon(ft.Icons.LOCAL_FIRE_DEPARTMENT, color="#FFBE0B", size=14), ft.Text("1 Dia", size=10, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)]), bgcolor="#1F2937", padding=ft.padding.only(left=6, right=6, top=2, bottom=2), border_radius=12),
         ft.Container(content=ft.Row([ft.Icon(ft.Icons.ROCKET_LAUNCH, color="#00E5FF", size=14), ft.Text("Nível 1", size=10, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)]), bgcolor="#1F2937", padding=ft.padding.only(left=6, right=6, top=2, bottom=2), border_radius=12)
-    ])
+    ], spacing=5)
+
+    btn_anotacoes = ft.TextButton("Anotações", icon=ft.Icons.EDIT_NOTE, style=ft.ButtonStyle(color="#39FF14"), on_click=abrir_modal_notas)
 
     arte_cabecalho = cv.Canvas(
-        height=250, 
+        height=210, 
         shapes=[
             cv.Path(elements=[cv.Path.MoveTo(0, 80), cv.Path.CubicTo(100, 10, 200, 150, 420, 60)], paint=ft.Paint(color="#4400E5FF", style=ft.PaintingStyle.STROKE, stroke_width=4)),
             cv.Path(elements=[cv.Path.MoveTo(0, 120), cv.Path.CubicTo(150, 200, 250, 20, 420, 100)], paint=ft.Paint(color="#44FFBE0B", style=ft.PaintingStyle.STROKE, stroke_width=4)),
@@ -207,25 +319,49 @@ def main(page: ft.Page):
         ]
     )
 
+    coluna_textos = ft.Container(
+        height=150, 
+        expand=True,
+        content=ft.Column([
+            ft.Row([
+                ft.IconButton(icon=ft.Icons.PERSON, icon_color=ft.Colors.WHITE, icon_size=18, width=24, height=24, on_click=abrir_modal_metricas, tooltip="Status", padding=0),
+                ft.Text(texto_data, size=12, color="#00E5FF", weight=ft.FontWeight.BOLD)
+            ], alignment=ft.MainAxisAlignment.START, spacing=5), 
+            
+            ft.Container(height=10),
+            
+            ft.Column([
+                ft.Text("Evolua 1%", size=24, weight=ft.FontWeight.W_900, color=ft.Colors.WHITE, font_family="Impact, Arial Black, sans-serif", text_align=ft.TextAlign.CENTER),
+                ft.Text("todos os dias!", size=24, weight=ft.FontWeight.W_900, color=ft.Colors.WHITE, font_family="Impact, Arial Black, sans-serif", text_align=ft.TextAlign.CENTER),
+            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0),
+            
+            ft.Container(height=4),
+            
+            ft.Text("A constância constrói resultados.", size=12, color="#D1D5DB"),
+        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN) 
+    )
+
+    bloco_radar_final, atualizar_progresso = criar_bloco_radar_gamificado(150)
+
+    bloco_superior = ft.Row([
+        coluna_textos,
+        ft.Container(bloco_radar_final, margin=ft.margin.only(right=25))
+    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.START)
+
+    bloco_inferior = ft.Row([
+        badges_gamificacao,
+        btn_anotacoes
+    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
+
     cabecalho = ft.Stack([
         arte_cabecalho, 
         ft.Container(
-            padding=ft.padding.only(top=20, left=15, right=15, bottom=5),
-            content=ft.Row([
-                ft.Column([
-                    ft.Row([
-                        ft.IconButton(icon=ft.Icons.PERSON, icon_color=ft.Colors.WHITE, icon_size=18, on_click=abrir_modal_metricas, tooltip="Status do Personagem", padding=0),
-                        ft.Text(texto_data, size=12, color="#00E5FF", weight=ft.FontWeight.BOLD)
-                    ], alignment=ft.MainAxisAlignment.START, spacing=5), 
-                    ft.Text("Evolua 1%", size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
-                    ft.Text("todos os dias!", size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
-                    ft.Container(height=1),
-                    ft.Text("A constância constrói resultados.", size=11, color="#9CA3AF"),
-                    ft.Container(height=5),
-                    badges_gamificacao
-                ], expand=True),
-                bloco_radar
-            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.START)
+            padding=ft.padding.only(top=20, left=15, right=15, bottom=0),
+            content=ft.Column([
+                bloco_superior,
+                ft.Container(height=10), 
+                bloco_inferior
+            ], spacing=0)
         )
     ])
 
@@ -267,10 +403,12 @@ def main(page: ft.Page):
             conn.commit()
             task_id = c.lastrowid
 
-        chk = ft.Checkbox(label=texto, value=concluida, fill_color=cor)
+        chk = ft.Checkbox(label=texto, value=concluida, fill_color="#39FF14" if concluida else cor)
         lista_checks.append(chk)
 
         def on_check(e):
+            chk.fill_color = "#39FF14" if chk.value else cor
+            chk.update()
             c.execute("UPDATE tarefas SET concluida=? WHERE id=?", (int(chk.value), task_id))
             conn.commit()
             atualizar_progresso()
@@ -298,7 +436,7 @@ def main(page: ft.Page):
             if campo.value: criar_tarefa_ui(campo.value, coluna_destino, lista_checks, cor, categoria); campo.value = ""; page.update()
         return ft.Row([campo, ft.IconButton(icon=ft.Icons.ADD_BOX, icon_color=cor, icon_size=35, on_click=add)])
 
-    # --- O FORMULÁRIO DE TREINOS COM ALARME ---
+    # --- O FORMULÁRIO DE TREINOS ---
     hora_temp = {"selecionada": ""}
 
     def on_time_change(e):
@@ -340,6 +478,7 @@ def main(page: ft.Page):
                 campo_peso.value = ""
                 carregar_dados_do_dia()
                 page.update()
+                campo_exercicio.focus() 
                 
         return ft.Column([
             campo_titulo,
@@ -353,6 +492,8 @@ def main(page: ft.Page):
         ], spacing=5)
 
     def on_check_treino(e, tid, c_obj):
+        c_obj.fill_color = "#39FF14" if c_obj.value else "#FF3D00"
+        c_obj.update()
         c.execute("UPDATE tarefas SET concluida=? WHERE id=?", (int(c_obj.value), tid))
         conn.commit()
         atualizar_progresso()
@@ -398,7 +539,7 @@ def main(page: ft.Page):
                 elif cat == "casa": criar_tarefa_ui(txt, coluna_casa, checks_casa, "#9CA3AF", cat, task_id, bool(concluida))
                 elif cat == "familia": criar_tarefa_ui(txt, coluna_familia, checks_familia, "#F472B6", cat, task_id, bool(concluida))
 
-            # --- RENDERIZAÇÃO DA TABELA DE TREINOS COM ALOGICA CONDICIONAL DE CABEÇALHO ---
+            # --- RENDERIZAÇÃO DA TABELA DE TREINOS ---
             treinos_do_dia = [t for t in tarefas if t[1] == "treinos"]
             grupos_treino = {}
             
@@ -429,19 +570,15 @@ def main(page: ft.Page):
                         alarme_do_grupo = alarme
                         break 
                 
-                # AQUI ESTÁ A MÁGICA DO ALINHAMENTO CONDICIONAL
                 if alarme_do_grupo and titulo != "Outros":
                     conteudo_header = ft.Row([
-                        # Titulo na esquerda
                         ft.Text(titulo.upper(), weight="bold", size=14, color=ft.Colors.WHITE),
-                        # Alarme na direita
                         ft.Row([
                             ft.Icon(ft.Icons.ALARM, size=14, color="#39FF14"), 
                             ft.Text(alarme_do_grupo, size=12, color="#39FF14", weight="bold")
                         ], spacing=2)
                     ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
                 else:
-                    # Titulo centralizado quando não tem alarme
                     conteudo_header = ft.Container(content=ft.Text(titulo.upper(), weight="bold", size=14, color=ft.Colors.WHITE), alignment=ft.Alignment(0, 0))
 
                 coluna_treinos.controls.append(
@@ -466,7 +603,7 @@ def main(page: ft.Page):
                     )
 
                 for task_id, ex, reps, peso, _, concluida in exs:
-                    chk = ft.Checkbox(value=bool(concluida), fill_color="#FF3D00")
+                    chk = ft.Checkbox(value=bool(concluida), fill_color="#39FF14" if concluida else "#FF3D00")
                     checks_treinos.append(chk)
                     chk.on_change = lambda e, tid=task_id, c_obj=chk: on_check_treino(e, tid, c_obj)
                     
@@ -482,7 +619,7 @@ def main(page: ft.Page):
         
         atualizar_progresso()
 
-    # --- BARRA DE SEMANA COMPACTADA ---
+    # --- BARRA DE SEMANA ---
     botoes_dias = []
     def on_click_dia(e, d):
         nonlocal dia_selecionado
@@ -496,16 +633,20 @@ def main(page: ft.Page):
     for d in dias_semana:
         btn = ft.Container(
             data=d,
-            content=ft.Text(d, weight=ft.FontWeight.BOLD, color="#000000" if d == dia_selecionado else ft.Colors.WHITE),
+            content=ft.Text(d, weight=ft.FontWeight.BOLD, color="#000000" if d == dia_selecionado else ft.Colors.WHITE, size=12),
             bgcolor="#00E5FF" if d == dia_selecionado else "#1F2937",
-            border_radius=10, 
-            padding=ft.padding.only(left=10, right=10, top=6, bottom=6), 
+            border_radius=8, 
+            padding=ft.padding.only(top=6, bottom=6), 
             alignment=ft.Alignment(0, 0),
-            on_click=lambda e, dia=d: on_click_dia(e, dia)
+            on_click=lambda e, dia=d: on_click_dia(e, dia),
+            expand=True 
         )
         botoes_dias.append(btn)
 
-    barra_semana = ft.Container(content=ft.Row(botoes_dias, scroll="auto", alignment=ft.MainAxisAlignment.SPACE_BETWEEN), padding=ft.padding.only(left=20, right=20, bottom=10))
+    barra_semana = ft.Container(
+        content=ft.Row(botoes_dias, spacing=4, alignment=ft.MainAxisAlignment.SPACE_BETWEEN), 
+        padding=ft.padding.only(left=15, right=15, bottom=10)
+    )
 
     # --- MODO FOCO ---
     txt_timer_foco = ft.Text("00:00", size=70, weight=ft.FontWeight.W_300, color=ft.Colors.WHITE)
@@ -598,8 +739,18 @@ def main(page: ft.Page):
 
     area_conteudo = ft.Container(content=aba_saude, expand=True)
 
+    # --- MENU INFERIOR ---
     def criar_botao_aba(icone, texto, index):
-        return ft.Container(content=ft.Row([ft.Icon(icone, size=14), ft.Text(texto, size=10, weight=ft.FontWeight.BOLD)]), padding=ft.padding.only(top=10, bottom=10, left=5, right=5), on_click=lambda e, i=index: mudar_aba(i), ink=True)
+        return ft.Container(
+            content=ft.Row([
+                ft.Icon(icone, size=14), 
+                ft.Text(texto, size=11, weight=ft.FontWeight.BOLD) 
+            ], spacing=4, alignment=ft.MainAxisAlignment.CENTER), 
+            padding=ft.padding.only(top=12, bottom=12), 
+            on_click=lambda e, i=index: mudar_aba(i), 
+            ink=True,
+            expand=True 
+        )
 
     botoes_abas = [criar_botao_aba(ft.Icons.FAVORITE, "Treinos & Saúde", 0), criar_botao_aba(ft.Icons.WORK, "Trabalhos & Estudos", 1), criar_botao_aba(ft.Icons.HOME, "Casa & Família", 2)]
 
@@ -617,7 +768,7 @@ def main(page: ft.Page):
         page.update()
 
     atualizar_botoes(0) 
-    menu_abas = ft.Container(content=ft.Row(botoes_abas, alignment=ft.MainAxisAlignment.SPACE_EVENLY))
+    menu_abas = ft.Container(content=ft.Row(botoes_abas, alignment=ft.MainAxisAlignment.SPACE_BETWEEN))
 
     carregar_dados_do_dia()
 
@@ -725,7 +876,7 @@ def main(page: ft.Page):
     )
 
     page.add(ft.Stack([
-        ft.Column([cabecalho, barra_semana, menu_abas, area_conteudo], expand=True),
+        ft.Column([cabecalho, barra_semana, menu_abas, area_conteudo], expand=True, spacing=0),
         tela_foco, 
         tela_abertura 
     ], expand=True))
@@ -760,7 +911,6 @@ def main(page: ft.Page):
             await asyncio.sleep(30) 
 
     page.run_task(checar_relogio_alarme)
-
 
 # --- INICIALIZAÇÃO LIMPA E SEGURA ---
 ft.app(target=main)
