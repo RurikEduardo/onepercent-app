@@ -92,9 +92,10 @@ def main(page: ft.Page):
             eixo_path_elements.append(cv.Path.LineTo(p.x, p.y))
         forma_eixos = cv.Path(eixo_path_elements, paint=ft.Paint(style=ft.PaintingStyle.STROKE, color="#55AAAAAA", stroke_width=1))
 
-        # 4. Preenchimento de Gradiente Roxo e Amarelo Concêntrico
-        forma_amarela = cv.Path([], paint=ft.Paint(style=ft.PaintingStyle.FILL, color="#BFFFEB3B", color_with_opacity=0.75)) 
-        forma_roxo = cv.Path([], paint=ft.Paint(style=ft.PaintingStyle.FILL, color="#BF9C27B0", color_with_opacity=0.75)) 
+        # 4. Preenchimento Roxo e Amarelo Concêntrico (Usando HEX ARGB limpo, sem comandos falsos)
+        # O prefixo BF é equivalente a 75% de opacidade!
+        forma_amarela = cv.Path([], paint=ft.Paint(style=ft.PaintingStyle.FILL, color="#BFFFEB3B")) 
+        forma_roxo = cv.Path([], paint=ft.Paint(style=ft.PaintingStyle.FILL, color="#BF9C27B0")) 
 
         canvas_radar = cv.Canvas([forma_interna, forma_externa, forma_eixos, forma_roxo, forma_amarela], width=tamanho, height=tamanho)
 
@@ -235,7 +236,8 @@ def main(page: ft.Page):
             conn.commit()
             input_nota.value = ""
             carregar_notas()
-            # REMOVIDO: input_nota.focus() para evitar travamento do teclado no mobile
+            # Não focar mais o teclado aqui para não bugar no Android
+            # input_nota.focus()
 
     def remover_nota(nid):
         c.execute("DELETE FROM notas WHERE id=?", (nid,))
@@ -303,7 +305,7 @@ def main(page: ft.Page):
         calc_imc(None)
         calc_meta(None)
 
-    # --- EMBLEMAS E CABEÇALHO ---
+    # --- EMBLEMAS E CABEÇALHO REESTRUTURADO ---
     badges_gamificacao = ft.Row([
         ft.Container(content=ft.Row([ft.Icon(ft.Icons.LOCAL_FIRE_DEPARTMENT, color="#FFBE0B", size=14), ft.Text("1 Dia", size=10, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)]), bgcolor="#1F2937", padding=ft.padding.only(left=6, right=6, top=2, bottom=2), border_radius=12),
         ft.Container(content=ft.Row([ft.Icon(ft.Icons.ROCKET_LAUNCH, color="#00E5FF", size=14), ft.Text("Nível 1", size=10, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)]), bgcolor="#1F2937", padding=ft.padding.only(left=6, right=6, top=2, bottom=2), border_radius=12)
@@ -338,6 +340,7 @@ def main(page: ft.Page):
             
             ft.Container(height=4),
             
+            # --- AJUSTE NA FONTE: Reduzi para 10.5 e travei em 1 linha (max_lines) para caber no mobile ---
             ft.Text("A constância constrói resultados.", size=10.5, color="#D1D5DB", max_lines=1),
         ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN) 
     )
@@ -479,7 +482,8 @@ def main(page: ft.Page):
                 campo_peso.value = ""
                 carregar_dados_do_dia()
                 page.update()
-                # REMOVIDO: campo_exercicio.focus() para evitar travamento do teclado no mobile
+                # Não focar mais o teclado aqui para não bugar no Android
+                # campo_exercicio.focus() 
                 
         return ft.Column([
             campo_titulo,
@@ -740,7 +744,7 @@ def main(page: ft.Page):
 
     area_conteudo = ft.Container(content=aba_saude, expand=True)
 
-    # --- MENU INFERIOR MENOR E ELEGANTE ---
+    # --- MENU INFERIOR ---
     def criar_botao_aba(icone, texto, index):
         return ft.Container(
             content=ft.Row([
