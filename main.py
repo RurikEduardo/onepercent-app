@@ -57,7 +57,7 @@ def main(page: ft.Page):
     dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
     dia_selecionado = dias_semana[hoje.weekday()]
 
-    # --- FUNÇÃO DO GRÁFICO DE RADAR GAMIFICADO (GRADIENTE RADIAL) ---
+    # --- FUNÇÃO DO GRÁFICO DE RADAR GAMIFICADO DE TEIA ---
     def criar_bloco_radar_gamificado(tamanho):
         cx, cy = tamanho / 2, tamanho / 2
         R = tamanho / 2 - 25 
@@ -92,15 +92,11 @@ def main(page: ft.Page):
             eixo_path_elements.append(cv.Path.LineTo(p.x, p.y))
         forma_eixos = cv.Path(eixo_path_elements, paint=ft.Paint(style=ft.PaintingStyle.STROKE, color="#55AAAAAA", stroke_width=1))
 
-        # 4. PREENCHIMENTO: Gradiente Radial Roxo pro Amarelo com 75% de Opacidade
-        gradiente_radar = ft.PaintRadialGradient(
-            center=ft.Offset(cx, cy),
-            radius=R,
-            colors=["#BF9C27B0", "#BFFFEB3B"] 
-        )
-        forma_dinamica = cv.Path([], paint=ft.Paint(style=ft.PaintingStyle.FILL, gradient=gradiente_radar))
+        # 4. Preenchimento de Gradiente Roxo e Amarelo Concêntrico
+        forma_amarela = cv.Path([], paint=ft.Paint(style=ft.PaintingStyle.FILL, color="#BFFFEB3B", color_with_opacity=0.75)) 
+        forma_roxo = cv.Path([], paint=ft.Paint(style=ft.PaintingStyle.FILL, color="#BF9C27B0", color_with_opacity=0.75)) 
 
-        canvas_radar = cv.Canvas([forma_dinamica, forma_interna, forma_eixos, forma_externa], width=tamanho, height=tamanho)
+        canvas_radar = cv.Canvas([forma_interna, forma_externa, forma_eixos, forma_roxo, forma_amarela], width=tamanho, height=tamanho)
 
         # 5. Texto Central
         texto_central_ui = ft.Text("0%", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)
@@ -115,18 +111,24 @@ def main(page: ft.Page):
             meta_agua = float(agua_meta_input.value.replace(',', '.')) if agua_meta_input.value else 3.0
             pct_agua = min(1.0, agua_atual / meta_agua) if meta_agua > 0 else 0
 
+            # Raios dinâmicos baseados no progresso
             r_tre, r_agu, r_tra = R * max(0.05, pct_treinos), R * max(0.05, pct_agua), R * max(0.05, pct_trab)
             r_est, r_cas, r_fam = R * max(0.05, pct_estudos), R * max(0.05, pct_casa), R * max(0.05, pct_familia)
             
             p_dinamicos = [r_tre, r_agu, r_tra, r_est, r_cas, r_fam]
             dinamico_points = []
+            roxo_points = []
             import math
             for i, raio in enumerate(p_dinamicos):
                 angle = math.radians(60 * i + 30) 
                 dinamico_points.append(cv.Path.LineTo(cx + raio * math.cos(angle), cy + raio * math.sin(angle)))
-            dinamico_points.append(cv.Path.LineTo(dinamico_points[0].x, dinamico_points[0].y)) 
+                roxo_points.append(cv.Path.LineTo(cx + (raio * 0.7) * math.cos(angle), cy + (raio * 0.7) * math.sin(angle))) 
 
-            forma_dinamica.elements = [cv.Path.MoveTo(dinamico_points[0].x, dinamico_points[0].y)] + dinamico_points[1:]
+            dinamico_points.append(cv.Path.LineTo(dinamico_points[0].x, dinamico_points[0].y)) 
+            roxo_points.append(cv.Path.LineTo(roxo_points[0].x, roxo_points[0].y)) 
+
+            forma_amarela.elements = [cv.Path.MoveTo(dinamico_points[0].x, dinamico_points[0].y)] + dinamico_points[1:]
+            forma_roxo.elements = [cv.Path.MoveTo(roxo_points[0].x, roxo_points[0].y)] + roxo_points[1:]
 
             total_items = len(checks_treinos) + len(checks_trabalho) + len(checks_estudos) + len(checks_casa) + len(checks_familia) + 1 
             concluidas = sum(1 for c in checks_treinos + checks_trabalho + checks_estudos + checks_casa + checks_familia if c.value)
@@ -136,7 +138,7 @@ def main(page: ft.Page):
             texto_central_ui.value = f"{int(geral * 100)}%"
             page.update()
 
-        # Rótulos
+        # Rótulos 
         rotulos_radar = ft.Stack([
             ft.Container(canvas_radar, alignment=ft.Alignment(0, 0)),
             ft.Container(ft.Text("Treinos", size=9, weight="bold", color="#FF3D00"), top=5, left=cx-20),
@@ -233,7 +235,7 @@ def main(page: ft.Page):
             conn.commit()
             input_nota.value = ""
             carregar_notas()
-            input_nota.focus()
+            # REMOVIDO: input_nota.focus() para evitar travamento do teclado no mobile
 
     def remover_nota(nid):
         c.execute("DELETE FROM notas WHERE id=?", (nid,))
@@ -301,7 +303,7 @@ def main(page: ft.Page):
         calc_imc(None)
         calc_meta(None)
 
-    # --- EMBLEMAS E CABEÇALHO REESTRUTURADO ---
+    # --- EMBLEMAS E CABEÇALHO ---
     badges_gamificacao = ft.Row([
         ft.Container(content=ft.Row([ft.Icon(ft.Icons.LOCAL_FIRE_DEPARTMENT, color="#FFBE0B", size=14), ft.Text("1 Dia", size=10, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)]), bgcolor="#1F2937", padding=ft.padding.only(left=6, right=6, top=2, bottom=2), border_radius=12),
         ft.Container(content=ft.Row([ft.Icon(ft.Icons.ROCKET_LAUNCH, color="#00E5FF", size=14), ft.Text("Nível 1", size=10, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)]), bgcolor="#1F2937", padding=ft.padding.only(left=6, right=6, top=2, bottom=2), border_radius=12)
@@ -336,7 +338,6 @@ def main(page: ft.Page):
             
             ft.Container(height=4),
             
-            # --- AJUSTE NA FONTE: Reduzi para 10.5 e travei em 1 linha (max_lines) para caber no mobile ---
             ft.Text("A constância constrói resultados.", size=10.5, color="#D1D5DB", max_lines=1),
         ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN) 
     )
@@ -478,7 +479,7 @@ def main(page: ft.Page):
                 campo_peso.value = ""
                 carregar_dados_do_dia()
                 page.update()
-                campo_exercicio.focus() 
+                # REMOVIDO: campo_exercicio.focus() para evitar travamento do teclado no mobile
                 
         return ft.Column([
             campo_titulo,
