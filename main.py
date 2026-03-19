@@ -92,15 +92,14 @@ def main(page: ft.Page):
             eixo_path_elements.append(cv.Path.LineTo(p.x, p.y))
         forma_eixos = cv.Path(eixo_path_elements, paint=ft.Paint(style=ft.PaintingStyle.STROKE, color="#55AAAAAA", stroke_width=1))
 
-        # 4. PREENCHIMENTO: Gradiente Radial Roxo pro Amarelo com 75% de Opacidade (Código Hexadecimal BF)
+        # 4. PREENCHIMENTO: Gradiente Radial Roxo pro Amarelo com 75% de Opacidade
         gradiente_radar = ft.PaintRadialGradient(
             center=ft.Offset(cx, cy),
             radius=R,
-            colors=["#BF9C27B0", "#BFFFEB3B"] # BF = 75% Opacidade, Roxo no centro e Amarelo na borda
+            colors=["#BF9C27B0", "#BFFFEB3B"] 
         )
         forma_dinamica = cv.Path([], paint=ft.Paint(style=ft.PaintingStyle.FILL, gradient=gradiente_radar))
 
-        # IMPORTANTE: Coloquei a forma_dinamica PRIMEIRO, assim as linhas da teia ficam POR CIMA do gradiente!
         canvas_radar = cv.Canvas([forma_dinamica, forma_interna, forma_eixos, forma_externa], width=tamanho, height=tamanho)
 
         # 5. Texto Central
@@ -337,7 +336,8 @@ def main(page: ft.Page):
             
             ft.Container(height=4),
             
-            ft.Text("A constância constrói resultados.", size=12, color="#D1D5DB"),
+            # --- AJUSTE NA FONTE: Reduzi para 10.5 e travei em 1 linha (max_lines) para caber no mobile ---
+            ft.Text("A constância constrói resultados.", size=10.5, color="#D1D5DB", max_lines=1),
         ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN) 
     )
 
@@ -739,7 +739,7 @@ def main(page: ft.Page):
 
     area_conteudo = ft.Container(content=aba_saude, expand=True)
 
-    # --- MENU INFERIOR ---
+    # --- MENU INFERIOR MENOR E ELEGANTE ---
     def criar_botao_aba(icone, texto, index):
         return ft.Container(
             content=ft.Row([
