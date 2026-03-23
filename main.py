@@ -151,7 +151,7 @@ def main(page: ft.Page):
     # INICIALIZANDO O GRÁFICO DE RADAR
     bloco_radar_final, atualizar_progresso = criar_bloco_radar_gamificado(150)
 
-    # --- TELA DE RESUMO SEMANAL (DASHBOARD - LINHAS A CADA 25% E TENDÊNCIA FINA) ---
+    # --- TELA DE RESUMO SEMANAL (DASHBOARD) ---
     coluna_resumo = ft.Column(expand=True, spacing=20, scroll=ft.ScrollMode.AUTO)
     conteudo_resumo = ft.Container(content=coluna_resumo, padding=20, expand=True) 
     
@@ -191,19 +191,14 @@ def main(page: ft.Page):
                 stats_cat[cat]['total'] += 1
                 if concluida: stats_cat[cat]['ok'] += 1
 
-        # --- GRÁFICO CUSTOMIZADO: MÁGICA MATEMÁTICA PERFEITA ---
-        
-        # 1. Gride de Fundo: Linhas Horizontais a cada 25%
-        # A área do gráfico é de 130px de altura (150 total - 20 texto do dia).
         gride_fundo_ui = ft.Stack([
-            ft.Container(width=280, height=1, bgcolor="#55AAAAAA", top=0),   # 100%
-            ft.Container(width=280, height=1, bgcolor="#55AAAAAA", top=32),  # 75%  (130 * 0.25)
-            ft.Container(width=280, height=1, bgcolor="#55AAAAAA", top=65),  # 50%  (130 * 0.5)
-            ft.Container(width=280, height=1, bgcolor="#55AAAAAA", top=97),  # 25%  (130 * 0.75)
-            ft.Container(width=280, height=1, bgcolor="#55AAAAAA", top=130), # 0%   (Base)
+            ft.Container(width=280, height=1, bgcolor="#55AAAAAA", top=0),   
+            ft.Container(width=280, height=1, bgcolor="#55AAAAAA", top=32),  
+            ft.Container(width=280, height=1, bgcolor="#55AAAAAA", top=65),  
+            ft.Container(width=280, height=1, bgcolor="#55AAAAAA", top=97),  
+            ft.Container(width=280, height=1, bgcolor="#55AAAAAA", top=130), 
         ], width=280, height=150)
 
-        # 2. Barras e Pontos
         day_column_stacks = []
         
         for d in dias_semana:
@@ -214,18 +209,14 @@ def main(page: ft.Page):
 
             day_column_stack = ft.Stack(width=40, height=150)
             
-            # Barra azul neon com opacidade (BF=75%)
             coluna_barra_fundo = ft.Column([
                 ft.Container(height=altura_barra, width=20, bgcolor="#BF00E5FF", border_radius=ft.border_radius.vertical(top=6, bottom=6)),
                 ft.Text(d, size=10, color="#9CA3AF")
             ], alignment=ft.MainAxisAlignment.END, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0)
             
             day_column_stack.controls.append(ft.Container(coluna_barra_fundo, left=10, bottom=0)) 
-            
-            # Ponto Vermelho Neon no topo
             day_column_stack.controls.append(ft.Container(width=6, height=6, bgcolor="#EF4444", border_radius=3, top=y_ponto, left=17))
             
-            # Texto da Porcentagem
             texto_porcentagem = ft.Text(f"{int(val)}%", size=9, color="#00E5FF", weight="bold", text_align=ft.TextAlign.CENTER)
             day_column_stack.controls.append(ft.Container(texto_porcentagem, top=y_ponto - 15, left=0, width=40, alignment=ft.Alignment(0, 0)))
 
@@ -233,8 +224,7 @@ def main(page: ft.Page):
 
         barras_ui = ft.Row(day_column_stacks, spacing=0, width=280, height=150)
 
-        # 3. Canvas da Linha de Tendência (AJUSTADO PARA LINHA FINA)
-        x_points = [20, 60, 100, 140, 180, 220, 260] # Centralizado em cada coluna de 40px
+        x_points = [20, 60, 100, 140, 180, 220, 260] 
         y_points = []
         for i in range(7):
             tot = stats_dias[dias_semana[i]]['total']
@@ -246,7 +236,6 @@ def main(page: ft.Page):
         for i in range(1, 7):
             path_elements.append(cv.Path.LineTo(x_points[i], y_points[i])) 
 
-        # Espessura reduzida para 1 (Linha fina)
         linha_tendencia_el = cv.Path(
             elements=path_elements,
             paint=ft.Paint(style=ft.PaintingStyle.STROKE, color=ft.Colors.WHITE, stroke_width=1)
@@ -254,7 +243,6 @@ def main(page: ft.Page):
 
         canvas_linha_tendencia = cv.Canvas(shapes=[linha_tendencia_el], width=280, height=150)
 
-        # --- Montagem Final do Gráfico Customizado Blindado ---
         grafico_barras_custom_stack = ft.Stack([
             ft.Container(gride_fundo_ui, alignment=ft.Alignment(0, 0)),
             ft.Container(canvas_linha_tendencia, alignment=ft.Alignment(0, 0)),
@@ -375,22 +363,101 @@ def main(page: ft.Page):
     )
     page.overlay.append(modal_metricas)
 
-    lista_notas_ui = ft.Column(scroll=ft.ScrollMode.AUTO, expand=True, spacing=10)
-    input_nota = ft.TextField(hint_text="Escreva uma nova anotação...", expand=True, dense=True, bgcolor="#1F2937", border_color=ft.Colors.TRANSPARENT, text_size=13)
+    # --- ANOTAÇÕES: LAYOUT EXPANDIDO PARA MÁXIMO ESPAÇO (TÓPICOS LIVRES) ---
+    lista_notas_ui = ft.Column(scroll=ft.ScrollMode.AUTO, expand=True, spacing=4)
+    
+    estado_nota = {"id": None}
+    
+    input_nota = ft.TextField(
+        hint_text="Título/Anotação", 
+        expand=True, dense=True, bgcolor="#1F2937", border_color=ft.Colors.TRANSPARENT, text_size=13,
+        multiline=True, min_lines=1, max_lines=4 
+    )
 
     def carregar_notas():
         lista_notas_ui.controls.clear()
         c.execute("SELECT id, texto FROM notas")
         for nid, txt in c.fetchall():
-            lista_notas_ui.controls.append(ft.Row([ft.Icon(ft.Icons.SUBDIRECTORY_ARROW_RIGHT, color="#39FF14", size=14), ft.Text(txt, expand=True, size=13, color=ft.Colors.WHITE), ft.IconButton(ft.Icons.DELETE_OUTLINE, icon_color="#EF4444", icon_size=18, on_click=lambda e, id=nid: remover_nota(id), padding=0)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.START))
+            linhas = txt.split('\n')
+            
+            # Botões de Ação (encolhidos e colados à direita para não ocupar espaço)
+            botoes_acao = ft.Row([
+                ft.IconButton(ft.Icons.EDIT, icon_color="#3A86FF", icon_size=15, width=24, height=24, on_click=lambda e, id=nid, texto=txt: preparar_edicao(id, texto), padding=0),
+                ft.IconButton(ft.Icons.DELETE_OUTLINE, icon_color="#EF4444", icon_size=15, width=24, height=24, on_click=lambda e, id=nid: remover_nota(id), padding=0)
+            ], spacing=0)
+
+            if len(linhas) > 1:
+                # O replace tira as aspas do título
+                titulo_nota = linhas[0].replace('"', '') 
+                
+                # A primeira linha (Título) compartilha o espaço com os botões
+                linha_titulo = ft.Row([
+                    ft.Icon(ft.Icons.SUBDIRECTORY_ARROW_RIGHT, color="#39FF14", size=14),
+                    ft.Text(titulo_nota, size=13, color=ft.Colors.WHITE, weight="bold", expand=True),
+                    botoes_acao
+                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.START)
+                
+                controles_topicos = [linha_titulo]
+                
+                # Os tópicos vêm embaixo e têm a largura 100% livre!
+                for i in range(1, len(linhas)):
+                    linha_txt = linhas[i].strip()
+                    if linha_txt != "":
+                        if linha_txt.startswith("[x] ") or linha_txt.startswith("[ ] "):
+                            linha_txt = linha_txt[4:]
+                        
+                        # Coloca um padding na esquerda para alinhar perfeitamente com o texto do título acima
+                        controles_topicos.append(
+                            ft.Container(
+                                content=ft.Text(linha_txt, size=13, color=ft.Colors.WHITE),
+                                padding=ft.padding.only(left=24) 
+                            )
+                        )
+                        
+                # Adiciona o bloco completo da nota
+                lista_notas_ui.controls.append(ft.Column(controles_topicos, spacing=2))
+
+            else:
+                linha_txt = txt.replace('"', '')
+                if linha_txt.startswith("[x] ") or linha_txt.startswith("[ ] "):
+                    linha_txt = linha_txt[4:]
+                
+                # Se for só uma linha, ela fica junto com os botões
+                lista_notas_ui.controls.append(
+                    ft.Row([
+                        ft.Icon(ft.Icons.SUBDIRECTORY_ARROW_RIGHT, color="#39FF14", size=14),
+                        ft.Text(linha_txt, size=13, color=ft.Colors.WHITE, expand=True),
+                        botoes_acao
+                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.START)
+                )
+        page.update()
+
+    def preparar_edicao(nid, texto_atual):
+        estado_nota["id"] = nid
+        input_nota.value = texto_atual
+        btn_add_nota.icon = ft.Icons.CHECK_CIRCLE
+        btn_add_nota.icon_color = "#FFBE0B" 
         page.update()
 
     def add_nota(e):
         if input_nota.value:
-            c.execute("INSERT INTO notas (texto) VALUES (?)", (input_nota.value,))
+            if estado_nota["id"] is None:
+                c.execute("INSERT INTO notas (texto) VALUES (?)", (input_nota.value,))
+            else:
+                c.execute("UPDATE notas SET texto=? WHERE id=?", (input_nota.value, estado_nota["id"]))
+                estado_nota["id"] = None
+                btn_add_nota.icon = ft.Icons.ADD_BOX
+                btn_add_nota.icon_color = "#39FF14"
+                
             conn.commit()
             input_nota.value = ""
             carregar_notas()
+        else:
+            if estado_nota["id"] is not None:
+                estado_nota["id"] = None
+                btn_add_nota.icon = ft.Icons.ADD_BOX
+                btn_add_nota.icon_color = "#39FF14"
+                page.update()
 
     def remover_nota(nid):
         c.execute("DELETE FROM notas WHERE id=?", (nid,))
@@ -399,6 +466,10 @@ def main(page: ft.Page):
 
     def fechar_modal_notas(e):
         modal_notas.open = False
+        estado_nota["id"] = None
+        input_nota.value = ""
+        btn_add_nota.icon = ft.Icons.ADD_BOX
+        btn_add_nota.icon_color = "#39FF14"
         page.update()
 
     def abrir_modal_notas(e):
@@ -406,10 +477,13 @@ def main(page: ft.Page):
         modal_notas.open = True
         page.update()
 
+    btn_add_nota = ft.IconButton(ft.Icons.ADD_BOX, icon_color="#39FF14", icon_size=35, on_click=add_nota, padding=0)
+
+    # Modal com a largura máxima esticada
     modal_notas = ft.AlertDialog(
         modal=True,
         title=ft.Row([ft.Icon(ft.Icons.EDIT_NOTE, color="#39FF14"), ft.Text("Anotações", color=ft.Colors.WHITE, size=18, weight="bold")]),
-        content=ft.Container(width=300, height=350, content=ft.Column([ft.Row([input_nota, ft.IconButton(ft.Icons.ADD_BOX, icon_color="#39FF14", icon_size=35, on_click=add_nota, padding=0)]), ft.Divider(color="#374151"), lista_notas_ui])),
+        content=ft.Container(width=320, height=350, content=ft.Column([ft.Row([input_nota, btn_add_nota], vertical_alignment=ft.CrossAxisAlignment.START), ft.Divider(color="#374151"), lista_notas_ui])),
         actions=[ft.ElevatedButton("Fechar", on_click=fechar_modal_notas, bgcolor="#1F2937", color=ft.Colors.WHITE)],
         bgcolor="#111827", shape=ft.RoundedRectangleBorder(radius=16)
     )
